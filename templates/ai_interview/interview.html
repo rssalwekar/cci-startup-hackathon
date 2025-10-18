@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Coding Interview - Session {{ session.id }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 4px 1fr;
+            grid-template-rows: 1fr 4px 1fr;
+            height: 100vh;
+            background-color: #1e1e1e;
+        }
+
+        .problem-section {
+            grid-column: 1;
+            grid-row: 1;
+            background-color: #2d2d30;
+            padding: 20px;
+            overflow-y: auto;
+            border: 1px solid #3e3e42;
+        }
+
+        .chat-section {
+            grid-column: 1;
+            grid-row: 3;
+            background-color: #252526;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #3e3e42;
+            min-height: 0;
+        }
+
+        .ide-section {
+            grid-column: 3;
+            grid-row: 1 / 4;
+            background-color: #1e1e1e;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #3e3e42;
+        }
+
+        .resize-handle-horizontal {
+            grid-column: 2;
+            grid-row: 1 / 4;
+            background-color: #3e3e42;
+            cursor: col-resize;
+            position: relative;
+        }
+
+        .resize-handle-horizontal:hover {
+            background-color: #4fc3f7;
+        }
+
+        .resize-handle-vertical {
+            grid-column: 1;
+            grid-row: 2;
+            background-color: #3e3e42;
+            cursor: row-resize;
+            position: relative;
+        }
+
+        .resize-handle-vertical:hover {
+            background-color: #4fc3f7;
+        }
+
+        .resize-handle {
+            background-color: #3e3e42;
+            cursor: col-resize;
+            width: 4px;
+            position: relative;
+        }
+
+        .resize-handle:hover {
+            background-color: #4fc3f7;
+        }
+
+        .resize-handle-vertical {
+            background-color: #3e3e42;
+            cursor: row-resize;
+            height: 4px;
+            position: relative;
+        }
+
+        .resize-handle-vertical:hover {
+            background-color: #4fc3f7;
+        }
+
+        .problem-title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #4fc3f7;
+            line-height: 1.2;
+        }
+
+        .problem-difficulty {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .difficulty-easy { background-color: #4caf50; color: white; }
+        .difficulty-medium { background-color: #ff9800; color: white; }
+        .difficulty-hard { background-color: #f44336; color: white; }
+
+        .problem-description {
+            line-height: 1.6;
+            margin-bottom: 20px;
+            font-size: 16px;
+            color: #ffffff;
+        }
+
+        .problem-constraints {
+            background-color: #2d2d30;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #3e3e42;
+        }
+
+        .problem-constraints strong {
+            color: #ffffff;
+            font-size: 16px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .problem-constraints div {
+            color: #cccccc;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .problem-examples {
+            margin-bottom: 20px;
+        }
+
+        .problem-examples strong {
+            color: #ffffff;
+            font-size: 16px;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .example {
+            margin-bottom: 16px;
+            padding: 12px;
+            background-color: #2d2d30;
+            border-radius: 6px;
+            border: 1px solid #3e3e42;
+        }
+
+        .example-label {
+            font-weight: bold;
+            color: #4fc3f7;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .example div {
+            margin-bottom: 6px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .example strong {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .example code {
+            background-color: #1e1e1e;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #4fc3f7;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+
+        .message.user {
+            background-color: #007acc;
+            margin-left: auto;
+        }
+
+        .message.ai {
+            background-color: #3e3e42;
+        }
+
+        .message.system {
+            background-color: #4caf50;
+            text-align: center;
+            max-width: 100%;
+        }
+
+        .message-header {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+
+        .chat-input {
+            padding: 20px;
+            background-color: #2d2d30;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            background-color: #3e3e42;
+            color: white;
+            font-size: 14px;
+        }
+
+        .chat-input input:focus {
+            outline: none;
+            border-color: #007acc;
+        }
+
+        .chat-input button {
+            padding: 10px 20px;
+            background-color: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .chat-input button:hover {
+            background-color: #005a9e;
+        }
+
+        .code-editor-container {
+            flex: 1;
+            display: grid;
+            grid-template-rows: 1fr 4px 200px;
+            min-height: 0;
+        }
+
+        .code-editor {
+            grid-row: 1;
+            background-color: #1e1e1e;
+            border: none;
+            color: #ffffff;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            padding: 20px;
+            resize: none;
+            outline: none;
+        }
+
+        .resize-handle-code {
+            grid-row: 2;
+            background-color: #3e3e42;
+            cursor: row-resize;
+            position: relative;
+        }
+
+        .resize-handle-code:hover {
+            background-color: #4fc3f7;
+        }
+
+        .output-section {
+            grid-row: 3;
+            background-color: #2d2d30;
+            padding: 20px;
+            border-top: 1px solid #3e3e42;
+            overflow-y: auto;
+        }
+
+        .ide-header {
+            background-color: #2d2d30;
+            padding: 10px 20px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ide-title {
+            font-weight: bold;
+            color: #4fc3f7;
+        }
+
+        .ide-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .ide-controls button {
+            padding: 5px 10px;
+            background-color: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .ide-controls button:hover {
+            background-color: #005a9e;
+        }
+
+
+        .output-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4fc3f7;
+        }
+
+        .output-content {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+
+        .status-bar {
+            background-color: #007acc;
+            padding: 5px 20px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .loading {
+            opacity: 0.6;
+        }
+
+        .error {
+            color: #f44336;
+        }
+
+        .success {
+            color: #4caf50;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Problem Section (Top Left) -->
+        <div class="problem-section">
+            {% if session.problem %}
+                <div class="problem-title">{{ session.problem.title }}</div>
+                <div class="problem-difficulty difficulty-{{ session.problem.difficulty }}">
+                    {{ session.problem.difficulty|title }}
+                </div>
+                <div class="problem-description">{{ session.problem.description|linebreaks }}</div>
+                
+                {% if session.problem.constraints %}
+                    <div class="problem-constraints">
+                        <strong>Constraints:</strong><br>
+                        {{ session.problem.constraints|linebreaks }}
+                    </div>
+                {% endif %}
+                
+                {% if session.problem.examples %}
+                    <div class="problem-examples">
+                        <strong>Examples:</strong><br>
+                        {% for example in session.problem.examples %}
+                            <div class="example">
+                                <div class="example-label">Example {{ forloop.counter }}:</div>
+                                <div><strong>Input:</strong> {{ example.input }}</div>
+                                <div><strong>Output:</strong> {{ example.output }}</div>
+                                {% if example.explanation %}
+                                    <div><strong>Explanation:</strong> {{ example.explanation }}</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="problem-title">Waiting for Problem Selection</div>
+                <div class="problem-description">
+                    The AI interviewer is assessing your preferences and will select an appropriate problem for you.
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Vertical Resize Handle (Between Problem and Chat) -->
+        <div class="resize-handle-vertical" id="verticalResizeHandle"></div>
+
+        <!-- Chat Section (Bottom Left) -->
+        <div class="chat-section">
+            <div class="chat-messages" id="chatMessages">
+                {% for message in messages %}
+                    <div class="message {{ message.message_type }}">
+                        <div class="message-header">{{ message.message_type|title }} - {{ message.timestamp|date:"H:i" }}</div>
+                        <div>{{ message.content|linebreaks }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+
+        <!-- Horizontal Resize Handle (Between Left and Right Panels) -->
+        <div class="resize-handle-horizontal" id="horizontalResizeHandle"></div>
+
+        <!-- IDE Section (Right Side) -->
+        <div class="ide-section">
+            <div class="ide-header">
+                <div class="ide-title">Code Editor</div>
+                <div class="ide-controls">
+                    <button onclick="runCode()">Run</button>
+                    <button onclick="submitCode()">Submit</button>
+                    <button onclick="requestHint()">Hint</button>
+                </div>
+            </div>
+            
+            <div class="code-editor-container">
+                <textarea class="code-editor" id="codeEditor" placeholder="Write your solution here...">def solution():
+    # Your code here
+    pass</textarea>
+                
+                <!-- Code Editor Resize Handle -->
+                <div class="resize-handle-code" id="codeResizeHandle"></div>
+                
+                <div class="output-section">
+                    <div class="output-title">Output</div>
+                    <div class="output-content" id="outputContent">Ready to run your code...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="status-bar">
+        <div>Session: {{ session.id }} | Status: {{ session.status|title }}</div>
+        <div id="connectionStatus">Connecting...</div>
+    </div>
+
+    <script>
+        // WebSocket connection
+        const websocketUrl = '{{ websocket_url }}';
+        let socket = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+
+        function connectWebSocket() {
+            try {
+                socket = new WebSocket(websocketUrl);
+                
+                socket.onopen = function(event) {
+                    console.log('WebSocket connected');
+                    document.getElementById('connectionStatus').textContent = 'Connected';
+                    document.getElementById('connectionStatus').className = 'success';
+                    reconnectAttempts = 0;
+                };
+                
+                socket.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    handleWebSocketMessage(data);
+                };
+                
+                socket.onclose = function(event) {
+                    console.log('WebSocket disconnected');
+                    document.getElementById('connectionStatus').textContent = 'Disconnected';
+                    document.getElementById('connectionStatus').className = 'error';
+                    
+                    // Attempt to reconnect
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        setTimeout(connectWebSocket, 2000 * reconnectAttempts);
+                    }
+                };
+                
+                socket.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                    document.getElementById('connectionStatus').textContent = 'Error';
+                    document.getElementById('connectionStatus').className = 'error';
+                };
+            } catch (error) {
+                console.error('Failed to connect WebSocket:', error);
+                document.getElementById('connectionStatus').textContent = 'Connection Failed';
+                document.getElementById('connectionStatus').className = 'error';
+            }
+        }
+
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'chat_message':
+                    addMessage(data.sender, data.message);
+                    // Check if this is a problem presentation message
+                    if (data.sender === 'ai' && data.message.includes('**') && data.message.includes('**')) {
+                        // Extract problem data from the message (this is a simple approach)
+                        // In a real implementation, you'd send structured data
+                        setTimeout(() => {
+                            // Try to get the current problem from the session
+                            fetch(`/ai-interview/api/session-data/{{ session.id }}/`)
+                                .then(response => response.json())
+                                .then(sessionData => {
+                                    if (sessionData.session.problem) {
+                                        updateProblemContent(sessionData.session.problem);
+                                    }
+                                })
+                                .catch(error => console.error('Error fetching session data:', error));
+                        }, 1000);
+                    }
+                    break;
+                case 'code_submission':
+                    // Handle code submission from other clients
+                    break;
+                case 'error':
+                    addMessage('system', `Error: ${data.message}`);
+                    break;
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (message && socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'chat_message',
+                    message: message
+                }));
+                input.value = '';
+            }
+        }
+
+        function addMessage(sender, content) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = `
+                <div class="message-header">${sender.toUpperCase()} - ${timestamp}</div>
+                <div>${content.replace(/\n/g, '<br>')}</div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function runCode() {
+            const code = document.getElementById('codeEditor').value;
+            const outputDiv = document.getElementById('outputContent');
+            
+            // Simple Python code execution simulation
+            outputDiv.textContent = 'Running code...';
+            outputDiv.className = 'loading';
+            
+            // In a real implementation, you would send this to a code execution service
+            setTimeout(() => {
+                outputDiv.textContent = 'Code execution not implemented in demo. In production, this would execute your Python code and show results.';
+                outputDiv.className = '';
+            }, 1000);
+        }
+
+        function submitCode() {
+            const code = document.getElementById('codeEditor').value;
+            
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'code_submission',
+                    code: code,
+                    language: 'python'
+                }));
+                
+                addMessage('system', 'Code submitted for analysis');
+            }
+        }
+
+        function requestHint() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'request_hint',
+                    hint_level: 1
+                }));
+            }
+        }
+
+        // Resizable functionality
+        function makeResizable() {
+            const container = document.querySelector('.container');
+            const codeEditorContainer = document.querySelector('.code-editor-container');
+            let isResizing = false;
+            let resizeType = null;
+            let startX, startY, startLeftPercentage, startTopPercentage, startCodePercentage;
+
+            // Helper function to get current grid values
+            function getCurrentGridValues() {
+                const gridColumns = container.style.gridTemplateColumns || '1fr 4px 1fr';
+                const gridRows = container.style.gridTemplateRows || '1fr 4px 1fr';
+                const codeGridRows = codeEditorContainer.style.gridTemplateRows || '1fr 4px 200px';
+                
+                // Parse current percentages
+                const leftPercentage = gridColumns.includes('fr') ? 50 : parseFloat(gridColumns.split(' ')[0]);
+                const topPercentage = gridRows.includes('fr') ? 50 : parseFloat(gridRows.split(' ')[0]);
+                const codePercentage = codeGridRows.includes('fr') ? 70 : parseFloat(codeGridRows.split(' ')[0]);
+                
+                return { leftPercentage, topPercentage, codePercentage };
+            }
+
+            // Horizontal resize (between left and right panels)
+            function handleHorizontalMouseDown(e) {
+                if (e.target.id === 'horizontalResizeHandle') {
+                    isResizing = true;
+                    resizeType = 'horizontal';
+                    startX = e.clientX;
+                    const values = getCurrentGridValues();
+                    startLeftPercentage = values.leftPercentage;
+                    document.addEventListener('mousemove', handleHorizontalMouseMove);
+                    document.addEventListener('mouseup', handleHorizontalMouseUp);
+                    e.preventDefault();
+                }
+            }
+
+            function handleHorizontalMouseMove(e) {
+                if (!isResizing || resizeType !== 'horizontal') return;
+                
+                const deltaX = e.clientX - startX;
+                const containerWidth = container.offsetWidth;
+                const deltaPercentage = (deltaX / containerWidth) * 100;
+                const leftPercentage = Math.max(20, Math.min(80, startLeftPercentage + deltaPercentage));
+                const rightPercentage = 100 - leftPercentage;
+                
+                container.style.gridTemplateColumns = `${leftPercentage}% 4px ${rightPercentage}%`;
+            }
+
+            function handleHorizontalMouseUp() {
+                if (resizeType === 'horizontal') {
+                    isResizing = false;
+                    resizeType = null;
+                    document.removeEventListener('mousemove', handleHorizontalMouseMove);
+                    document.removeEventListener('mouseup', handleHorizontalMouseUp);
+                }
+            }
+
+            // Vertical resize (between problem and chat)
+            function handleVerticalMouseDown(e) {
+                if (e.target.id === 'verticalResizeHandle') {
+                    isResizing = true;
+                    resizeType = 'vertical';
+                    startY = e.clientY;
+                    const values = getCurrentGridValues();
+                    startTopPercentage = values.topPercentage;
+                    document.addEventListener('mousemove', handleVerticalMouseMove);
+                    document.addEventListener('mouseup', handleVerticalMouseUp);
+                    e.preventDefault();
+                }
+            }
+
+            function handleVerticalMouseMove(e) {
+                if (!isResizing || resizeType !== 'vertical') return;
+                
+                const deltaY = e.clientY - startY;
+                const containerHeight = container.offsetHeight;
+                const deltaPercentage = (deltaY / containerHeight) * 100;
+                const topPercentage = Math.max(20, Math.min(80, startTopPercentage + deltaPercentage));
+                const bottomPercentage = 100 - topPercentage;
+                
+                container.style.gridTemplateRows = `${topPercentage}% 4px ${bottomPercentage}%`;
+            }
+
+            function handleVerticalMouseUp() {
+                if (resizeType === 'vertical') {
+                    isResizing = false;
+                    resizeType = null;
+                    document.removeEventListener('mousemove', handleVerticalMouseMove);
+                    document.removeEventListener('mouseup', handleVerticalMouseUp);
+                }
+            }
+
+            // Code editor resize (between code editor and output)
+            function handleCodeMouseDown(e) {
+                if (e.target.id === 'codeResizeHandle') {
+                    isResizing = true;
+                    resizeType = 'code';
+                    startY = e.clientY;
+                    const values = getCurrentGridValues();
+                    startCodePercentage = values.codePercentage;
+                    document.addEventListener('mousemove', handleCodeMouseMove);
+                    document.addEventListener('mouseup', handleCodeMouseUp);
+                    e.preventDefault();
+                }
+            }
+
+            function handleCodeMouseMove(e) {
+                if (!isResizing || resizeType !== 'code') return;
+                
+                const deltaY = e.clientY - startY;
+                const containerHeight = codeEditorContainer.offsetHeight;
+                const deltaPercentage = (deltaY / containerHeight) * 100;
+                const codePercentage = Math.max(30, Math.min(90, startCodePercentage + deltaPercentage));
+                const outputHeight = Math.max(100, containerHeight - (codePercentage / 100) * containerHeight);
+                
+                codeEditorContainer.style.gridTemplateRows = `${codePercentage}% 4px ${outputHeight}px`;
+            }
+
+            function handleCodeMouseUp() {
+                if (resizeType === 'code') {
+                    isResizing = false;
+                    resizeType = null;
+                    document.removeEventListener('mousemove', handleCodeMouseMove);
+                    document.removeEventListener('mouseup', handleCodeMouseUp);
+                }
+            }
+
+            // Add event listeners
+            document.addEventListener('mousedown', handleHorizontalMouseDown);
+            document.addEventListener('mousedown', handleVerticalMouseDown);
+            document.addEventListener('mousedown', handleCodeMouseDown);
+        }
+
+        function updateProblemContent(problemData) {
+            const problemSection = document.querySelector('.problem-section');
+            if (problemData) {
+                // Format constraints properly
+                let constraintsHtml = '';
+                if (problemData.constraints) {
+                    const constraints = problemData.constraints.split('\n').filter(line => line.trim());
+                    constraintsHtml = `
+                        <div class="problem-constraints">
+                            <strong>Constraints:</strong>
+                            ${constraints.map(constraint => `<div>${constraint.trim()}</div>`).join('')}
+                        </div>
+                    `;
+                }
+
+                // Format examples properly
+                let examplesHtml = '';
+                if (problemData.examples && problemData.examples.length > 0) {
+                    examplesHtml = `
+                        <div class="problem-examples">
+                            <strong>Examples:</strong>
+                            ${problemData.examples.map((example, index) => `
+                                <div class="example">
+                                    <div class="example-label">Example ${index + 1}:</div>
+                                    <div><strong>Input:</strong> <code>${example.input}</code></div>
+                                    <div><strong>Output:</strong> <code>${example.output}</code></div>
+                                    ${example.explanation ? `<div><strong>Explanation:</strong> ${example.explanation}</div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                problemSection.innerHTML = `
+                    <div class="problem-title">${problemData.title}</div>
+                    <div class="problem-difficulty difficulty-${problemData.difficulty}">
+                        ${problemData.difficulty.charAt(0).toUpperCase() + problemData.difficulty.slice(1)}
+                    </div>
+                    <div class="problem-description">${problemData.description.replace(/\n/g, '<br>')}</div>
+                    ${constraintsHtml}
+                    ${examplesHtml}
+                `;
+                // Re-add resize handle after content update
+                makeResizable();
+            }
+        }
+
+        // Event listeners
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Initialize WebSocket connection
+        connectWebSocket();
+        
+        // Initialize resizable layout
+        makeResizable();
+    </script>
+</body>
+</html>
+
