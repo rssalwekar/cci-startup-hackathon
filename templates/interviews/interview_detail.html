@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ interview.problem_name }} - Interview Detail{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <!-- Interview Header -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h2 class="mb-2">{{ interview.problem_name }}</h2>
+                            <div>
+                                <span class="badge badge-difficulty-{{ interview.problem_difficulty }}">
+                                    {{ interview.get_problem_difficulty_display }}
+                                </span>
+                                <span class="badge bg-secondary">{{ interview.programming_language }}</span>
+                                {% if interview.status == 'completed' %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Completed
+                                    </span>
+                                {% elif interview.status == 'in_progress' %}
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-hourglass-split"></i> In Progress
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if interview.overall_score %}
+                            <div class="text-center">
+                                <h1 class="text-primary mb-0">{{ interview.overall_score }}</h1>
+                                <small class="text-muted">/ 100</small>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <p class="text-muted mb-2">
+                        <i class="bi bi-calendar"></i> {{ interview.created_at|date:"F d, Y" }} • 
+                        <i class="bi bi-clock"></i> {{ interview.get_duration_display }}
+                    </p>
+                    
+                    {% if interview.problem_link %}
+                        <a href="{{ interview.problem_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-link-45deg"></i> View Problem on LeetCode
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Problem Description -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-text"></i> Problem Description
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p style="white-space: pre-wrap;">{{ interview.problem_description }}</p>
+                </div>
+            </div>
+            
+            <!-- Submitted Code -->
+            {% if interview.submitted_code %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-code-slash"></i> Your Solution
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <pre class="bg-light p-3 rounded"><code>{{ interview.submitted_code }}</code></pre>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Recording -->
+            {% if interview.recording_url %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-play-circle"></i> Interview Recording
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <audio controls class="w-100">
+                            <source src="{{ interview.recording_url }}" type="audio/webm">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Transcript -->
+            {% if interview.transcript %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-chat-left-text"></i> Interview Transcript
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p style="white-space: pre-wrap;">{{ interview.transcript }}</p>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Feedback Report -->
+            {% if interview.feedback_report %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-clipboard-check"></i> Detailed Feedback
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p style="white-space: pre-wrap;">{{ interview.feedback_report }}</p>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Feedback by Category -->
+            {% if feedback_by_category %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list-check"></i> Feedback Breakdown
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% for category, feedback in feedback_by_category.items %}
+                            <h6 class="text-capitalize">{{ category|replace:"_":" " }}</h6>
+                            
+                            {% if feedback.strengths %}
+                                <div class="mb-3">
+                                    <strong class="text-success">
+                                        <i class="bi bi-check-circle"></i> Strengths:
+                                    </strong>
+                                    <ul class="mb-0">
+                                        {% for strength in feedback.strengths %}
+                                            <li>{{ strength }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% endif %}
+                            
+                            {% if feedback.improvements %}
+                                <div class="mb-3">
+                                    <strong class="text-warning">
+                                        <i class="bi bi-exclamation-circle"></i> Areas for Improvement:
+                                    </strong>
+                                    <ul class="mb-0">
+                                        {% for improvement in feedback.improvements %}
+                                            <li>{{ improvement }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% endif %}
+                            
+                            {% if not forloop.last %}<hr>{% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Notes -->
+            {% if notes %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-journal"></i> Interview Notes
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% for note in notes %}
+                            <div class="mb-3">
+                                <span class="badge bg-info">{{ note.get_note_type_display }}</span>
+                                <span class="text-muted small">{{ note.timestamp|date:"H:i:s" }}</span>
+                                <p class="mb-0 mt-1">{{ note.content }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Score Breakdown -->
+            {% if interview.is_completed and interview.overall_score %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-graph-up"></i> Score Breakdown
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Communication</span>
+                                <strong>{{ interview.communication_score|default:"-" }}</strong>
+                            </div>
+                            {% if interview.communication_score %}
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" 
+                                         style="width: {{ interview.communication_score }}%"></div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Problem Solving</span>
+                                <strong>{{ interview.problem_solving_score|default:"-" }}</strong>
+                            </div>
+                            {% if interview.problem_solving_score %}
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: {{ interview.problem_solving_score }}%"></div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-0">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Code Quality</span>
+                                <strong>{{ interview.code_quality_score|default:"-" }}</strong>
+                            </div>
+                            {% if interview.code_quality_score %}
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-warning" role="progressbar" 
+                                         style="width: {{ interview.code_quality_score }}%"></div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Quick Summary -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if interview.strengths %}
+                        <div class="mb-3">
+                            <h6 class="text-success">
+                                <i class="bi bi-check-circle"></i> What Went Well
+                            </h6>
+                            <p class="small" style="white-space: pre-wrap;">{{ interview.strengths }}</p>
+                        </div>
+                    {% endif %}
+                    
+                    {% if interview.areas_for_improvement %}
+                        <div>
+                            <h6 class="text-warning">
+                                <i class="bi bi-exclamation-triangle"></i> Areas to Improve
+                            </h6>
+                            <p class="small mb-0" style="white-space: pre-wrap;">{{ interview.areas_for_improvement }}</p>
+                        </div>
+                    {% endif %}
+                    
+                    {% if not interview.strengths and not interview.areas_for_improvement %}
+                        <p class="text-muted small mb-0">
+                            Feedback will be available once the interview is completed.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="card">
+                <div class="card-body">
+                    <a href="{% url 'interview_list' %}" class="btn btn-outline-primary w-100 mb-2">
+                        <i class="bi bi-arrow-left"></i> Back to List
+                    </a>
+                    <a href="{% url 'delete_interview' interview.id %}" class="btn btn-outline-danger w-100">
+                        <i class="bi bi-trash"></i> Delete Interview
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

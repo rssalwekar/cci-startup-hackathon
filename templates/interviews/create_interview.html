@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Create New Interview{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="bi bi-plus-circle"></i> Create New Mock Interview
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Note:</strong> This is a simplified form for manual creation. 
+                        In production, interviews will be automatically created by the AI system.
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Interview Title</label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   placeholder="e.g., Mock Interview #1" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="problem_name" class="form-label">Problem Name</label>
+                            <input type="text" class="form-control" id="problem_name" name="problem_name" 
+                                   placeholder="e.g., Two Sum, Valid Parentheses" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="problem_description" class="form-label">Problem Description</label>
+                            <textarea class="form-control" id="problem_description" name="problem_description" 
+                                      rows="6" placeholder="Describe the problem..." required></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="difficulty" class="form-label">Difficulty</label>
+                                <select class="form-select" id="difficulty" name="difficulty" required>
+                                    <option value="easy">Easy</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="hard">Hard</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="language" class="form-label">Programming Language</label>
+                                <select class="form-select" id="language" name="language" required>
+                                    <option value="python" selected>Python</option>
+                                    <option value="javascript">JavaScript</option>
+                                    <option value="java">Java</option>
+                                    <option value="cpp">C++</option>
+                                    <option value="csharp">C#</option>
+                                    <option value="go">Go</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-play-circle"></i> Create & Start Interview
+                            </button>
+                            <a href="{% url 'profile' %}" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Information Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightbulb"></i> How It Works
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li class="mb-2">Create an interview with a coding problem</li>
+                        <li class="mb-2">The AI interviewer will ask you to explain your approach</li>
+                        <li class="mb-2">Code your solution while discussing your thought process</li>
+                        <li class="mb-2">The AI will ask clarifying questions and provide hints if needed</li>
+                        <li>Receive detailed feedback on your performance</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

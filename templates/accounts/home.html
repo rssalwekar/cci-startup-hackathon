@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Mock Interview Platform{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold mb-4">
+            <i class="bi bi-mic-fill"></i> Master Your Technical Interviews
+        </h1>
+        <p class="lead mb-4">
+            Practice coding interviews with AI-powered feedback. 
+            Get LeetCode problems, real-time conversation, and detailed performance reports.
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{% url 'signup' %}" class="btn btn-light btn-lg">
+                <i class="bi bi-person-plus"></i> Get Started Free
+            </a>
+            <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg">
+                <i class="bi bi-box-arrow-in-right"></i> Login
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Features -->
+    <div class="row mb-5">
+        <div class="col-md-4">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <i class="bi bi-code-square"></i>
+                    <h4>Real Coding Problems</h4>
+                    <p class="text-muted">
+                        Practice with actual LeetCode-style problems curated for technical interviews
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <i class="bi bi-chat-dots"></i>
+                    <h4>AI Interviewer</h4>
+                    <p class="text-muted">
+                        Talk through your solution with an AI that asks relevant questions and provides hints
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    <h4>Detailed Feedback</h4>
+                    <p class="text-muted">
+                        Get comprehensive reports on communication, problem-solving, and code quality
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- How It Works -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="text-center mb-4">How It Works</h2>
+        </div>
+        <div class="col-md-3 text-center">
+            <div class="mb-3">
+                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" 
+                     style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                    1
+                </div>
+            </div>
+            <h5>Sign Up</h5>
+            <p class="text-muted">Create your free account</p>
+        </div>
+        <div class="col-md-3 text-center">
+            <div class="mb-3">
+                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" 
+                     style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                    2
+                </div>
+            </div>
+            <h5>Start Interview</h5>
+            <p class="text-muted">Choose a problem and begin</p>
+        </div>
+        <div class="col-md-3 text-center">
+            <div class="mb-3">
+                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" 
+                     style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                    3
+                </div>
+            </div>
+            <h5>Solve & Discuss</h5>
+            <p class="text-muted">Code while talking to AI</p>
+        </div>
+        <div class="col-md-3 text-center">
+            <div class="mb-3">
+                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" 
+                     style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                    4
+                </div>
+            </div>
+            <h5>Get Feedback</h5>
+            <p class="text-muted">Review detailed report</p>
+        </div>
+    </div>
+
+    <!-- Call to Action -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center py-5">
+                    <h2 class="mb-3">Ready to Ace Your Next Interview?</h2>
+                    <p class="lead mb-4">Join thousands of engineers preparing for their dream jobs</p>
+                    <a href="{% url 'signup' %}" class="btn btn-light btn-lg">
+                        <i class="bi bi-rocket-takeoff"></i> Start Practicing Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

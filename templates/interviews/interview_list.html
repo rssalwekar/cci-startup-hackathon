@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block title %}My Interviews{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-list-ul"></i> My Interviews
+        </h2>
+        <a href="{% url 'create_interview' %}" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> New Interview
+        </a>
+    </div>
+    
+    <!-- Filter Tabs -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link {% if not status_filter %}active{% endif %}" href="{% url 'interview_list' %}">
+                All
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status_filter == 'completed' %}active{% endif %}" 
+               href="{% url 'interview_list' %}?status=completed">
+                Completed
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status_filter == 'in_progress' %}active{% endif %}" 
+               href="{% url 'interview_list' %}?status=in_progress">
+                In Progress
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if status_filter == 'scheduled' %}active{% endif %}" 
+               href="{% url 'interview_list' %}?status=scheduled">
+                Scheduled
+            </a>
+        </li>
+    </ul>
+    
+    {% if interviews %}
+        <div class="row">
+            {% for interview in interviews %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0">{{ interview.problem_name }}</h5>
+                                {% if interview.overall_score %}
+                                    <h4 class="text-primary mb-0">{{ interview.overall_score }}<small>/100</small></h4>
+                                {% endif %}
+                            </div>
+                            
+                            <p class="text-muted small mb-3">
+                                <i class="bi bi-calendar"></i> {{ interview.created_at|date:"M d, Y" }} • 
+                                <i class="bi bi-clock"></i> {{ interview.get_duration_display }}
+                            </p>
+                            
+                            <div class="mb-3">
+                                <span class="badge badge-difficulty-{{ interview.problem_difficulty }}">
+                                    {{ interview.get_problem_difficulty_display }}
+                                </span>
+                                <span class="badge bg-secondary">{{ interview.programming_language }}</span>
+                                {% if interview.status == 'completed' %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Completed
+                                    </span>
+                                {% elif interview.status == 'in_progress' %}
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-hourglass-split"></i> In Progress
+                                    </span>
+                                {% elif interview.status == 'scheduled' %}
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-calendar-event"></i> Scheduled
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if interview.problem_description %}
+                                <p class="card-text small">
+                                    {{ interview.problem_description|truncatewords:20 }}
+                                </p>
+                            {% endif %}
+                            
+                            {% if interview.is_completed and interview.overall_score %}
+                                <div class="row text-center mb-3 small">
+                                    <div class="col-4">
+                                        <strong>{{ interview.communication_score|default:"-" }}</strong>
+                                        <div class="text-muted">Communication</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <strong>{{ interview.problem_solving_score|default:"-" }}</strong>
+                                        <div class="text-muted">Problem Solving</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <strong>{{ interview.code_quality_score|default:"-" }}</strong>
+                                        <div class="text-muted">Code Quality</div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            <a href="{% url 'interview_detail' interview.id %}" class="btn btn-primary w-100">
+                                <i class="bi bi-eye"></i> View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 4rem; color: #cbd5e1;"></i>
+                <h4 class="mt-3">No interviews found</h4>
+                <p class="text-muted">
+                    {% if status_filter %}
+                        No {{ status_filter }} interviews yet.
+                    {% else %}
+                        Start your first mock interview to begin practicing!
+                    {% endif %}
+                </p>
+                <a href="{% url 'create_interview' %}" class="btn btn-success mt-2">
+                    <i class="bi bi-plus-circle"></i> Create New Interview
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
