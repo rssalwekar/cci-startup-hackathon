@@ -25,12 +25,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-qk%9y7uv_a!e+5b#8^b@2jjlzi9beh&v=3*s#a$av0jbmxlc27"
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-qk%9y7uv_a!e+5b#8^b@2jjlzi9beh&v=3*s#a$av0jbmxlc27')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+# Supabase configuration
+SUPABASE_URL = os.getenv('SUPABASE_URL', '')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
+SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY', '')
 
 
 # Application definition
@@ -44,12 +49,16 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "channels",
+    "corsheaders",
     "ai_interview",
+    "accounts",
+    "interviews",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -133,10 +142,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Channels configuration
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
-        },
+        # Use InMemoryChannelLayer for development (no Redis needed)
+        # For production, use RedisChannelLayer and uncomment the Redis config below
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+        
+        # Production Redis configuration (uncomment when Redis is available):
+        # "BACKEND": "channels_redis.core.RedisChannelLayer",
+        # "CONFIG": {
+        #     "hosts": [("127.0.0.1", 6379)],
+        # },
     },
 }
 

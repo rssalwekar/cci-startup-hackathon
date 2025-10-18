@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -61,7 +62,26 @@ def complete_interview(request, session_id):
         session.ai_feedback = feedback
         session.save()
         
-        return redirect('interview_results', session_id=session.id)
+        # Create Interview record for history tracking
+        from interviews.models import Interview
+        Interview.objects.create(
+            user=request.user,
+            title=f"AI Interview - {session.problem.title if session.problem else 'Practice'}",
+            problem_name=session.problem.title if session.problem else "Practice Problem",
+            problem_description=session.problem.description if session.problem else "",
+            problem_difficulty=session.problem.difficulty if session.problem else "medium",
+            programming_language=session.programming_language or "python",
+            status='completed',
+            duration_minutes=(session.completed_at - session.started_at).seconds // 60 if session.started_at and session.completed_at else 0,
+            overall_score=session.overall_score or 0,
+            communication_score=session.communication_score or 0,
+            problem_solving_score=session.problem_solving_score or 0,
+            code_quality_score=session.code_quality_score or 0,
+        )
+        
+        # Show success message and redirect to profile
+        messages.success(request, f'Interview completed! Overall score: {session.overall_score or 0}/100')
+        return redirect('profile')
     
     return render(request, 'ai_interview/complete_interview.html', {'session': session})
 

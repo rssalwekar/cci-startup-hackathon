@@ -36,13 +36,15 @@ def interview_detail_view(request, interview_id):
     # Organize feedback by category
     feedback_by_category = {}
     for point in feedback_points:
-        if point.category not in feedback_by_category:
-            feedback_by_category[point.category] = {'strengths': [], 'improvements': []}
+        # Replace underscores with spaces for display
+        display_category = point.category.replace('_', ' ')
+        if display_category not in feedback_by_category:
+            feedback_by_category[display_category] = {'strengths': [], 'improvements': []}
         
         if point.is_positive:
-            feedback_by_category[point.category]['strengths'].append(point.point)
+            feedback_by_category[display_category]['strengths'].append(point.point)
         else:
-            feedback_by_category[point.category]['improvements'].append(point.point)
+            feedback_by_category[display_category]['improvements'].append(point.point)
     
     context = {
         'interview': interview,
@@ -55,23 +57,9 @@ def interview_detail_view(request, interview_id):
 
 @login_required
 def create_interview_view(request):
-    """Create a new interview (placeholder for now, will be integrated with AI)"""
-    if request.method == 'POST':
-        # This is a simplified version - in production, this would be triggered by the AI system
-        interview = Interview.objects.create(
-            user=request.user,
-            title=request.POST.get('title', 'Mock Interview'),
-            problem_name=request.POST.get('problem_name', 'Sample Problem'),
-            problem_description=request.POST.get('problem_description', ''),
-            problem_difficulty=request.POST.get('difficulty', 'medium'),
-            programming_language=request.POST.get('language', 'python'),
-            status='scheduled'
-        )
-        
-        messages.success(request, 'Interview scheduled successfully!')
-        return redirect('interview_detail', interview_id=interview.id)
-    
-    return render(request, 'interviews/create_interview.html')
+    """Redirect to the AI interview start page"""
+    # Redirect to the AI interview start page where user can begin
+    return redirect('start_interview')
 
 
 @login_required

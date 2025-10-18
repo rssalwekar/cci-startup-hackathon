@@ -4,6 +4,17 @@
 
 {% block content %}
 <div class="container mt-4">
+    <!-- Quick Start Banner -->
+    <div class="alert alert-info d-flex align-items-center justify-content-between mb-4" role="alert">
+        <div>
+            <i class="bi bi-info-circle-fill me-2"></i>
+            <strong>Ready to practice?</strong> Choose your problem and start interviewing!
+        </div>
+        <a href="{% url 'create_interview' %}" class="btn btn-success">
+            <i class="bi bi-mic-fill"></i> Start Interview
+        </a>
+    </div>
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>
             <i class="bi bi-list-ul"></i> My Interviews
