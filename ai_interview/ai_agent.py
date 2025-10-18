@@ -10,43 +10,24 @@ from .leetcode_service import leetcode_service
 class AIInterviewAgent:
     def __init__(self):
         self.client = KronosLabs(api_key=settings.KRONOS_API_KEY)
-        self.system_prompt = """You are an experienced technical interviewer conducting a coding interview. Your role is to:
+        self.system_prompt = """You are a technical interviewer conducting a coding interview. Be CONCISE and helpful.
 
-1. Assess the candidate's skill level through conversation
-2. Select an appropriate LeetCode-style problem based on their preferences
-3. Guide the candidate through the problem-solving process
-4. Provide hints when they get stuck, but let them lead the solution
-5. Ask clarifying questions about their approach
-6. Give constructive feedback
+Your role:
+1. Guide candidates through problem-solving
+2. Provide brief hints when stuck
+3. Ask clarifying questions
+4. Give constructive feedback
 
-Be encouraging, professional, and helpful. Don't give away the solution directly - guide them to discover it themselves."""
+Keep responses short (2-3 sentences max). Be encouraging but don't give away solutions."""
 
     def get_initial_greeting(self) -> str:
         """Get the initial greeting message from the AI."""
-        return """Hello! I'm your AI interviewer today. I'm excited to conduct this coding interview with you. 
+        return """Hi! I'm your AI interviewer. Let's start!
 
-Let's start by getting to know your preferences:
+**Difficulty:** Easy, Medium, or Hard?
+**Topic:** Arrays, Strings, Trees, Graphs, DP, etc.
 
-**What difficulty level would you like to work on?**
-- Easy
-- Medium  
-- Hard
-
-**What topic would you like to focus on?** (You can choose one or more)
-- Arrays
-- Strings
-- Trees
-- Graphs
-- Dynamic Programming
-- Binary Search
-- Two Pointers
-- Sliding Window
-- Hash Tables
-- Stacks/Queues
-- Linked Lists
-- Or any other topic you'd like to practice
-
-Please let me know both your preferred difficulty level and topic(s), and I'll select an appropriate problem for you!"""
+Tell me both and I'll pick a problem for you!"""
 
     def assess_skill_level(self, user_message: str, session: InterviewSession) -> str:
         """Assess user's skill level and preferences based on their message."""
@@ -120,22 +101,18 @@ Please let me know both your preferred difficulty level and topic(s), and I'll s
 
     def present_problem(self, problem: Problem) -> str:
         """Present the problem to the user."""
-        message = f"""Great! I've selected a {problem.difficulty} problem for you: **{problem.title}**
+        return f"""Perfect! Here's your {problem.difficulty} problem: **{problem.title}**
 
-The problem details are now displayed in the problem window on the left. Take your time to read through the problem description, constraints, and examples.
-
-When you're ready, let me know your approach or if you have any questions about the problem!"""
-        
-        return message
+Read the details in the left panel. What's your approach?"""
 
     def provide_guidance(self, user_message: str, session: InterviewSession, current_code: str = "") -> str:
         """Provide guidance based on user's current progress."""
         problem = session.problem
         if not problem:
-            return "I don't have a problem selected yet. Let me help you get started."
+            return "No problem selected yet. Let's start!"
         
-        # Get recent chat history for context
-        recent_messages = ChatMessage.objects.filter(session=session).order_by('-timestamp')[:10]
+        # Get recent chat history for context (limit to last 5 messages)
+        recent_messages = ChatMessage.objects.filter(session=session).order_by('-timestamp')[:5]
         chat_history = []
         for msg in recent_messages:
             role = "user" if msg.message_type == "user" else "assistant"
@@ -144,30 +121,21 @@ When you're ready, let me know your approach or if you have any questions about 
         # Reverse to get chronological order
         chat_history.reverse()
         
-        # Build context for the AI
-        context = f"""You are conducting a coding interview. The current problem is:
+        # Build concise context for the AI
+        context = f"""Coding interview coach. Be CONCISE and helpful.
 
-**{problem.title}**
-{problem.description}
+Problem: {problem.title}
+User: {user_message}
+Code: {current_code[:150] if current_code else "None"}
 
-The user's current code:
-```python
-{current_code}
-```
-
-Recent conversation:
-{json.dumps(chat_history, indent=2)}
-
-User's latest message: {user_message}
-
-Provide helpful guidance without giving away the solution. Ask clarifying questions, suggest approaches, or provide hints if they seem stuck."""
+Give brief guidance. Max 2-3 sentences. Ask one clarifying question."""
         
         prompt = f"{self.system_prompt}\n\n{context}"
         
         response = self.client.chat.completions.create(
             prompt=prompt,
             model="hermes",
-            temperature=0.7,
+            temperature=0.5,
             is_stream=False
         )
         
@@ -177,61 +145,35 @@ Provide helpful guidance without giving away the solution. Ask clarifying questi
         """Provide a progressive hint for the current problem."""
         problem = session.problem
         if not problem or not problem.hints:
-            return "I don't have specific hints for this problem, but I can help guide you through your approach. What are you thinking so far?"
+            return "No specific hints available. What's your current approach?"
         
         # Get hint based on level (1-indexed)
         hint_index = min(hint_level - 1, len(problem.hints) - 1)
         hint = problem.hints[hint_index]
         
-        return f"Here's a hint to help you along: {hint}"
+        return f"Hint: {hint}"
 
     def analyze_code(self, code: str, session: InterviewSession, test_results: dict = None) -> str:
         """Analyze the user's code and provide feedback."""
         problem = session.problem
         if not problem:
-            return "I don't have a problem to compare your code against."
+            return "No problem to compare against."
         
         # Build test results context if available
         test_context = ""
         if test_results:
             passed = test_results.get('passed', 0)
             total = test_results.get('total', 0)
-            test_context = f"""
-
-**Test Results: {passed}/{total} test cases passed**
-
-"""
-            if test_results.get('results'):
-                test_context += "**Detailed Test Results:**\n"
-                for result in test_results['results']:
-                    status = "✅ PASS" if result['passed'] else "❌ FAIL"
-                    test_context += f"- Test Case {result['testNumber']}: {status}\n"
-                    if not result['passed']:
-                        test_context += f"  - Expected: {result['expected']}\n"
-                        test_context += f"  - Actual: {result['actual']}\n"
-                        if result.get('error'):
-                            test_context += f"  - Error: {result['error']}\n"
+            test_context = f" Tests: {passed}/{total} passed."
         
-        context = f"""Analyze this code for the problem: {problem.title}
+        context = f"""Code review for: {problem.title}
 
-Problem description: {problem.description}
+Code:
+{code[:300]}{test_context}
 
-User's code:
-```python
-{code}
-```{test_context}
-
-Provide constructive feedback on:
-1. Correctness of the approach
-2. Time/space complexity
-3. Code quality and style
-4. Potential improvements
-5. Whether it solves the problem
-6. Analysis of any failing test cases (if applicable)
-
-Be encouraging but honest. Don't give away the solution if it's incorrect."""
+Give brief feedback on correctness, complexity, and improvements. Max 3 sentences."""
         
-        prompt = f"You are a technical interviewer providing code review feedback. Be constructive and educational.\n\n{context}"
+        prompt = f"Technical interviewer. Be CONCISE and helpful.\n\n{context}"
         
         response = self.client.chat.completions.create(
             prompt=prompt,

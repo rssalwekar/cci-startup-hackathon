@@ -291,6 +291,7 @@
             background-color: #2d2d30;
             display: flex;
             gap: 10px;
+            align-items: center;
         }
 
         .chat-input input {
@@ -320,6 +321,111 @@
 
         .chat-input button:hover {
             background-color: #005a9e;
+        }
+
+        .voice-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .voice-button {
+            padding: 10px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .voice-button.mic {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        .voice-button.mic:hover {
+            background-color: #45a049;
+        }
+
+        .voice-button.mic.recording {
+            background-color: #f44336;
+            animation: pulse 1s infinite;
+        }
+
+        .voice-button.speaker {
+            background-color: #2196f3;
+            color: white;
+        }
+
+        .voice-button.speaker:hover {
+            background-color: #1976d2;
+        }
+
+        .voice-button.speaker.speaking {
+            background-color: #ff9800;
+            animation: pulse 1s infinite;
+        }
+        
+        .voice-button.respeak {
+            background-color: #FF9800;
+            color: white;
+        }
+        
+        .voice-button.respeak:hover {
+            background-color: #F57C00;
+        }
+        
+        .voice-button.respeak:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .voice-button.continuous {
+            background-color: #9C27B0;
+            color: white;
+        }
+        
+        .voice-button.continuous:hover {
+            background-color: #7B1FA2;
+        }
+        
+        .voice-button.continuous.active {
+            background-color: #4CAF50;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .voice-status {
+            font-size: 12px;
+            color: #cccccc;
+            margin-left: 10px;
+        }
+
+        .character-counter {
+            font-size: 10px;
+            color: #888888;
+            margin-left: 10px;
+            padding: 2px 6px;
+            background-color: #2d2d30;
+            border-radius: 3px;
+        }
+
+        .character-counter.warning {
+            color: #ff9800;
+        }
+
+        .character-counter.critical {
+            color: #f44336;
         }
 
         .code-editor-container {
@@ -493,6 +599,22 @@
             
             <div class="chat-input">
                 <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off">
+                <div class="voice-controls">
+                    <button class="voice-button mic" id="micButton" onclick="toggleRecording()" title="Click to speak">
+                        🎤
+                    </button>
+                    <button class="voice-button continuous" id="continuousButton" onclick="toggleContinuousListening()" title="Toggle Continuous Listening (Auto-detect speech)">
+                        🎯
+                    </button>
+                    <button class="voice-button speaker" id="speakerButton" onclick="toggleSpeaking()" title="Click to hear AI response">
+                        🔊
+                    </button>
+                    <button class="voice-button respeak" id="respeakButton" onclick="respeakLastAI()" title="Re-speak Last AI Message (Saves API calls)">
+                        🔁
+                    </button>
+                    <span class="voice-status" id="voiceStatus"></span>
+                    <span class="character-counter" id="characterCounter">0 chars</span>
+                </div>
                 <button onclick="sendMessage()">Send</button>
             </div>
         </div>
@@ -720,6 +842,11 @@
             messagesContainer.appendChild(messageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             console.log('Message added to container');
+            
+            // Auto-speak AI messages if speech is enabled
+            if (sender === 'ai' && window.speechEnabled) {
+                speakText(content);
+            }
         }
 
 
@@ -1093,6 +1220,460 @@
         
         // Initialize resizable layout
         makeResizable();
+
+        // Voice functionality
+        let recognition = null;
+        let isRecording = false;
+        let speechSynthesis = window.speechSynthesis;
+        let currentUtterance = null;
+        let continuousListening = false;
+        let silenceTimeout = null;
+        let speechStartTime = null;
+        let lastSpeechTime = null;
+        
+        // Character tracking for ElevenLabs usage
+        let totalCharactersUsed = 0;
+        const MAX_FREE_CHARACTERS = 10000; // ElevenLabs free tier limit
+
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+            } else if ('SpeechRecognition' in window) {
+                recognition = new SpeechRecognition();
+            } else {
+                document.getElementById('voiceStatus').textContent = 'Speech recognition not supported';
+                return false;
+            }
+
+            recognition.continuous = true; // Enable continuous listening
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = function() {
+                isRecording = true;
+                document.getElementById('micButton').classList.add('recording');
+                document.getElementById('voiceStatus').textContent = 'Listening...';
+            };
+
+            recognition.onresult = function(event) {
+                let finalTranscript = '';
+                let interimTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                if (finalTranscript) {
+                    // Update the input field
+                    document.getElementById('messageInput').value = finalTranscript;
+                    document.getElementById('voiceStatus').textContent = 'Processing...';
+                    
+                    // In continuous mode, automatically send the message
+                    if (continuousListening) {
+                        setTimeout(() => {
+                            sendMessage();
+                            // Clear the input field after sending
+                            document.getElementById('messageInput').value = '';
+                            // Restart listening after sending
+                            if (continuousListening) {
+                                setTimeout(() => {
+                                    startContinuousListening();
+                                }, 1000);
+                            }
+                        }, 500);
+                    }
+                } else if (interimTranscript) {
+                    document.getElementById('messageInput').value = interimTranscript;
+                }
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                
+                // Handle different error types
+                if (event.error === 'not-allowed') {
+                    document.getElementById('voiceStatus').textContent = 'Microphone access denied. Click the lock icon in your browser address bar and allow microphone access, then try again.';
+                    document.getElementById('voiceStatus').style.color = '#f44336';
+                    stopContinuousListening();
+                    
+                    // Show a more detailed help message
+                    setTimeout(() => {
+                        alert('Microphone Access Required\n\nTo use voice features:\n1. Click the lock icon 🔒 in your browser address bar\n2. Click "Site settings" or "Permissions"\n3. Set Microphone to "Allow"\n4. Refresh the page and try again');
+                    }, 1000);
+                } else if (event.error === 'no-speech') {
+                    document.getElementById('voiceStatus').textContent = 'No speech detected. Try speaking again.';
+                    document.getElementById('voiceStatus').style.color = '#ff9800';
+                    // Restart listening for no-speech errors
+                    if (continuousListening) {
+                        setTimeout(() => {
+                            startContinuousListening();
+                        }, 1000);
+                    }
+                } else if (event.error === 'network') {
+                    document.getElementById('voiceStatus').textContent = 'Network error. Retrying...';
+                    document.getElementById('voiceStatus').style.color = '#ff9800';
+                    // Restart listening for network errors
+                    if (continuousListening) {
+                        setTimeout(() => {
+                            startContinuousListening();
+                        }, 2000);
+                    }
+                } else {
+                    document.getElementById('voiceStatus').textContent = 'Speech error: ' + event.error;
+                    document.getElementById('voiceStatus').style.color = '#f44336';
+                    // Restart listening for other errors
+                    if (continuousListening) {
+                        setTimeout(() => {
+                            startContinuousListening();
+                        }, 1000);
+                    }
+                }
+                
+                stopRecording();
+            };
+
+            recognition.onend = function() {
+                stopRecording();
+                
+                // Restart continuous listening if it's enabled
+                if (continuousListening) {
+                    setTimeout(() => {
+                        startContinuousListening();
+                    }, 100);
+                }
+            };
+
+            return true;
+        }
+
+        function toggleRecording() {
+            if (!recognition) {
+                if (!initSpeechRecognition()) {
+                    return;
+                }
+            }
+
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        function startRecording() {
+            try {
+                recognition.start();
+            } catch (error) {
+                console.error('Error starting speech recognition:', error);
+                document.getElementById('voiceStatus').textContent = 'Error starting recording';
+            }
+        }
+
+        function stopRecording() {
+            isRecording = false;
+            document.getElementById('micButton').classList.remove('recording');
+            document.getElementById('voiceStatus').textContent = '';
+            
+            if (recognition) {
+                recognition.stop();
+            }
+        }
+
+        // Continuous listening functions
+        function toggleContinuousListening() {
+            console.log('toggleContinuousListening called, current state:', continuousListening);
+            
+            // Visual feedback that button was clicked
+            const button = document.getElementById('continuousButton');
+            button.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                button.style.transform = 'scale(1)';
+            }, 100);
+            
+            if (continuousListening) {
+                console.log('Stopping continuous listening');
+                stopContinuousListening();
+            } else {
+                console.log('Starting continuous listening');
+                startContinuousListening();
+            }
+        }
+
+        function startContinuousListening() {
+            console.log('startContinuousListening called');
+            console.log('recognition object:', recognition);
+            
+            if (!recognition) {
+                console.log('No recognition object, initializing...');
+                if (!initSpeechRecognition()) {
+                    console.log('Failed to initialize speech recognition');
+                    return;
+                }
+            }
+
+            console.log('Setting continuous listening to true');
+            continuousListening = true;
+            document.getElementById('continuousButton').classList.add('active');
+            document.getElementById('continuousButton').textContent = '🎯';
+            document.getElementById('voiceStatus').textContent = '🎤 Starting microphone...';
+            document.getElementById('voiceStatus').style.color = '#4CAF50';
+            
+            // Request microphone permission and start listening
+            if (!isRecording) {
+                try {
+                    console.log('Starting recognition...');
+                    recognition.start();
+                    console.log('Recognition started successfully');
+                } catch (error) {
+                    console.error('Error starting continuous listening:', error);
+                    document.getElementById('voiceStatus').textContent = 'Microphone access required - please allow and try again';
+                    document.getElementById('voiceStatus').style.color = '#f44336';
+                    continuousListening = false;
+                    document.getElementById('continuousButton').classList.remove('active');
+                }
+            } else {
+                console.log('Already recording, skipping start');
+            }
+        }
+
+        function stopContinuousListening() {
+            continuousListening = false;
+            document.getElementById('continuousButton').classList.remove('active');
+            document.getElementById('continuousButton').textContent = '🎯';
+            document.getElementById('voiceStatus').textContent = '';
+            document.getElementById('voiceStatus').style.color = '';
+            
+            // Stop current recording
+            if (isRecording) {
+                stopRecording();
+            }
+        }
+
+        async function speakText(text) {
+            // Stop any current speech
+            if (currentUtterance) {
+                speechSynthesis.cancel();
+            }
+
+            try {
+                document.getElementById('speakerButton').classList.add('speaking');
+                document.getElementById('voiceStatus').textContent = 'Generating speech...';
+
+                // Track character usage
+                const characterCount = text.length;
+                totalCharactersUsed += characterCount;
+                updateCharacterCounter();
+
+                // Use ElevenLabs for natural speech synthesis
+                const response = await fetch('/ai-interview/api/synthesize-speech/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        voice_id: '21m00Tcm4TlvDq8ikWAM'  // Natural-sounding voice
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.audio) {
+                    // Show cache hit indicator if audio was cached
+                    if (data.cached) {
+                        showCacheHit();
+                    }
+                    
+                    // Create audio element and play the generated speech
+                    const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
+                    
+                    audio.onplay = function() {
+                        document.getElementById('voiceStatus').textContent = 'Speaking...';
+                    };
+
+                    audio.onended = function() {
+                        document.getElementById('speakerButton').classList.remove('speaking');
+                        document.getElementById('voiceStatus').textContent = '';
+                        currentUtterance = null;
+                    };
+
+                    audio.onerror = function() {
+                        document.getElementById('speakerButton').classList.remove('speaking');
+                        document.getElementById('voiceStatus').textContent = 'Speech error';
+                        currentUtterance = null;
+                    };
+
+                    currentUtterance = audio;
+                    await audio.play();
+                } else {
+                    throw new Error(data.error || 'Failed to generate speech');
+                }
+            } catch (error) {
+                console.error('Speech synthesis error:', error);
+                document.getElementById('speakerButton').classList.remove('speaking');
+                document.getElementById('voiceStatus').textContent = 'Speech error';
+                currentUtterance = null;
+                
+                // Fallback to built-in speech synthesis
+                fallbackSpeechSynthesis(text);
+            }
+        }
+
+        function fallbackSpeechSynthesis(text) {
+            // Fallback to built-in Web Speech API
+            const cleanText = text
+                .replace(/\*\*(.*?)\*\*/g, '$1')
+                .replace(/\*(.*?)\*/g, '$1')
+                .replace(/`(.*?)`/g, '$1')
+                .replace(/#{1,6}\s*/g, '')
+                .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+                .replace(/\n+/g, ' ')
+                .trim();
+
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+            utterance.volume = 0.8;
+
+            utterance.onstart = function() {
+                document.getElementById('speakerButton').classList.add('speaking');
+                document.getElementById('voiceStatus').textContent = 'Speaking...';
+            };
+
+            utterance.onend = function() {
+                document.getElementById('speakerButton').classList.remove('speaking');
+                document.getElementById('voiceStatus').textContent = '';
+                currentUtterance = null;
+            };
+
+            utterance.onerror = function(event) {
+                console.error('Fallback speech synthesis error:', event.error);
+                document.getElementById('speakerButton').classList.remove('speaking');
+                document.getElementById('voiceStatus').textContent = 'Speech error';
+                currentUtterance = null;
+            };
+
+            currentUtterance = utterance;
+            speechSynthesis.speak(utterance);
+        }
+
+        // Re-speak the last AI message (uses cached audio to save API calls)
+        async function respeakLastAI() {
+            try {
+                // Disable button during request
+                const respeakButton = document.getElementById('respeakButton');
+                respeakButton.disabled = true;
+                respeakButton.textContent = '⏳';
+                
+                // Get the last AI message from the session
+                const response = await fetch(`/ai-interview/api/last-ai-message/{{ session.id }}/`);
+                const data = await response.json();
+                
+                if (data.success && data.message) {
+                    // Use the cached audio (this will use cache if available, or generate new if not)
+                    await speakText(data.message);
+                } else {
+                    document.getElementById('voiceStatus').textContent = 'No AI message to re-speak';
+                    setTimeout(() => {
+                        document.getElementById('voiceStatus').textContent = '';
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Error getting last AI message:', error);
+                document.getElementById('voiceStatus').textContent = 'Error getting last message';
+                setTimeout(() => {
+                    document.getElementById('voiceStatus').textContent = '';
+                }, 2000);
+            } finally {
+                // Re-enable button
+                const respeakButton = document.getElementById('respeakButton');
+                respeakButton.disabled = false;
+                respeakButton.textContent = '🔁';
+            }
+        }
+
+        function toggleSpeaking() {
+            if (currentUtterance && speechSynthesis.speaking) {
+                speechSynthesis.cancel();
+                document.getElementById('speakerButton').classList.remove('speaking');
+                document.getElementById('voiceStatus').textContent = '';
+            } else {
+                // Get the last AI message and speak it
+                const messages = document.querySelectorAll('.message.ai');
+                if (messages.length > 0) {
+                    const lastMessage = messages[messages.length - 1];
+                    const messageContent = lastMessage.querySelector('div:last-child').textContent;
+                    speakText(messageContent);
+                } else {
+                    document.getElementById('voiceStatus').textContent = 'No AI message to speak';
+                }
+            }
+        }
+
+        // Helper function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Character counter functions
+        function updateCharacterCounter() {
+            const counter = document.getElementById('characterCounter');
+            const percentage = (totalCharactersUsed / MAX_FREE_CHARACTERS) * 100;
+            
+            counter.textContent = `${totalCharactersUsed}/${MAX_FREE_CHARACTERS} chars`;
+            
+            // Update styling based on usage
+            counter.className = 'character-counter';
+            if (percentage >= 80) {
+                counter.classList.add('critical');
+            } else if (percentage >= 60) {
+                counter.classList.add('warning');
+            }
+        }
+        
+        // Show cache hit indicator
+        function showCacheHit() {
+            const status = document.getElementById('voiceStatus');
+            status.textContent = 'Using cached audio (saved API call!)';
+            status.style.color = '#4CAF50';
+            setTimeout(() => {
+                status.textContent = '';
+                status.style.color = '';
+            }, 2000);
+        }
+
+        // Initialize voice functionality
+        window.speechEnabled = true;
+        
+        // Initialize speech recognition on page load
+        if (initSpeechRecognition()) {
+            console.log('Speech recognition initialized successfully');
+        } else {
+            console.log('Speech recognition not available');
+        }
+        
+        updateCharacterCounter();
+        
+        // Don't start continuous listening automatically - requires user interaction
+        // User needs to click the continuous button to enable microphone access
     </script>
 </body>
 </html>
