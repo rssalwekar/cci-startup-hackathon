@@ -12,57 +12,27 @@ A Django-based platform that provides AI-powered coding interviews with real-tim
 - **Session Management**: Track interview sessions and progress
 - **Comprehensive Feedback**: AI-generated feedback and performance analysis
 
-## Setup Instructions
+### Setup Instructions
 
-### Prerequisites
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+brew install redis
 
-- Python 3.8+
-- Redis server (for WebSocket channels)
-- Kronos Labs API key
+# 2. Set up environment
+cp .env.example .env  # Add KRONOS_API_KEY
 
-### Installation
+# 3. Run migrations
+python manage.py migrate
+python manage.py create_demo_user
 
-1. **Clone the repository and navigate to the project directory**
+# 4. Start services
+brew services start redis
+python -m daphne -b 127.0.0.1 -p 8000 interview_platform.asgi:application
 
-2. **Create and activate virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install django djangorestframework channels channels-redis kronoslabs python-dotenv
-   ```
-
-4. **Set up environment variables**
-   Create a `.env` file in the project root:
-   ```
-   KRONOS_API_KEY=your_kronos_api_key_here
-   SECRET_KEY=django-insecure-qk%9y7uv_a!e+5b#8^b@2jjlzi9beh&v=3*s#a$av0jbmxlc27
-   DEBUG=True
-   ```
-
-5. **Run database migrations**
-   ```bash
-   python manage.py migrate
-   ```
-
-6. **Create demo user and populate problems**
-   ```bash
-   python manage.py create_demo_user
-   python manage.py populate_problems
-   ```
-
-7. **Start Redis server** (required for WebSocket functionality)
-   ```bash
-   redis-server
-   ```
-
-8. **Run the development server**
-   ```bash
-   python manage.py runserver
-   ```
+# 5. Kill server
+pkill -f daphne
+```
 
 ### Usage
 
