@@ -8,6 +8,7 @@ from django.utils import timezone
 import json
 from .models import InterviewSession, ChatMessage, CodeSubmission, Problem
 from .ai_agent import AIInterviewAgent
+from .voice_service import voice_service
 
 
 @login_required
@@ -207,3 +208,84 @@ def get_test_cases(request, session_id):
             ]
     
     return JsonResponse({'test_cases': test_cases})
+
+
+@login_required
+@require_http_methods(["POST"])
+def synthesize_speech(request):
+    """Convert text to speech using ElevenLabs API."""
+    try:
+        data = json.loads(request.body)
+        text = data.get('text', '')
+        voice_id = data.get('voice_id', '21m00Tcm4TlvDq8ikWAM')  # Default natural voice
+        
+        if not text:
+            return JsonResponse({'error': 'No text provided'}, status=400)
+        
+        # Check if we have cached audio
+        cache_key = voice_service._create_cache_key(
+            voice_service._clean_text_for_speech(text), 
+            voice_id
+        )
+        was_cached = cache_key in voice_service.audio_cache
+        
+        # Generate speech using ElevenLabs
+        audio_base64 = voice_service.generate_speech(text, voice_id)
+        
+        if audio_base64:
+            return JsonResponse({
+                'success': True,
+                'audio': audio_base64,
+                'format': 'mp3',
+                'cached': was_cached
+            })
+        else:
+            return JsonResponse({'error': 'Failed to generate speech'}, status=500)
+            
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def get_available_voices(request):
+    """Get list of available voices from ElevenLabs."""
+    try:
+        voices = voice_service.get_available_voices()
+        return JsonResponse({
+            'success': True,
+            'voices': voices,
+            'service_available': voice_service.is_available()
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_last_ai_message(request, session_id):
+    """Get the last AI message from a session for re-speaking."""
+    try:
+        session = get_object_or_404(InterviewSession, id=session_id, user=request.user)
+        
+        # Get the last AI message from the session
+        last_message = ChatMessage.objects.filter(
+            session=session,
+            message_type='ai'
+        ).order_by('-timestamp').first()
+        
+        if last_message:
+            return JsonResponse({
+                'success': True,
+                'message': last_message.content,
+                'timestamp': last_message.timestamp.isoformat()
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'No AI messages found in this session'
+            }, status=404)
+            
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

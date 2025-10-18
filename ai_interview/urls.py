@@ -9,5 +9,8 @@ urlpatterns = [
     path('api/submit-code/<int:session_id>/', views.submit_code, name='submit_code'),
     path('api/session-data/<int:session_id>/', views.get_session_data, name='get_session_data'),
     path('get-test-cases/<int:session_id>/', views.get_test_cases, name='get_test_cases'),
+    path('api/synthesize-speech/', views.synthesize_speech, name='synthesize_speech'),
+    path('api/available-voices/', views.get_available_voices, name='get_available_voices'),
+    path('api/last-ai-message/<int:session_id>/', views.get_last_ai_message, name='get_last_ai_message'),
 ]
 

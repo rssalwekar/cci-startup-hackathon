@@ -148,19 +148,17 @@ class InterviewConsumer(AsyncWebsocketConsumer):
                 # Try to extract preferences from user message
                 await self.extract_preferences(user_message)
                 
-                # Check if we have both difficulty and topic preferences
+                # Check if we have at least one preference
                 has_difficulty = bool(self.session.difficulty_preference)
                 has_topics = bool(self.session.topic_preferences)
                 
-                if not has_difficulty or not has_topics:
-                    # Ask for missing preferences
-                    missing = []
-                    if not has_difficulty:
-                        missing.append("difficulty level (easy, medium, or hard)")
-                    if not has_topics:
-                        missing.append("topic(s) you'd like to work on")
-                    
-                    await self.send_ai_message(f"I'd like to make sure I select the perfect problem for you. Could you please specify your preferred {' and '.join(missing)}?")
+                # If we have at least one preference, proceed with problem selection
+                if has_difficulty or has_topics:
+                    # Log what we found for debugging
+                    print(f"AI Agent: Found preferences - difficulty: {self.session.difficulty_preference}, topics: {self.session.topic_preferences}")
+                else:
+                    # Ask for at least one preference
+                    await self.send_ai_message("I'd like to select a good problem for you. Could you please specify either your preferred difficulty level (easy, medium, or hard) or topic(s) you'd like to work on?")
                     return
                 
                 # We have both preferences, select and present problem
@@ -185,13 +183,18 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         # Simple keyword matching for now - could be enhanced with NLP
         user_message_lower = user_message.lower()
         
+        print(f"AI Agent: Extracting preferences from: '{user_message}'")
+        
         # Extract difficulty preference
         if 'easy' in user_message_lower:
             self.session.difficulty_preference = 'easy'
+            print("AI Agent: Found difficulty: easy")
         elif 'medium' in user_message_lower:
             self.session.difficulty_preference = 'medium'
+            print("AI Agent: Found difficulty: medium")
         elif 'hard' in user_message_lower:
             self.session.difficulty_preference = 'hard'
+            print("AI Agent: Found difficulty: hard")
         
         # Extract topic preferences with more comprehensive mapping
         topics = []
@@ -234,9 +237,13 @@ class InterviewConsumer(AsyncWebsocketConsumer):
             if keyword in user_message_lower:
                 if topic not in topics:  # Avoid duplicates
                     topics.append(topic)
+                    print(f"AI Agent: Found topic: {topic} (from keyword: {keyword})")
         
         if topics:
             self.session.topic_preferences = topics
+            print(f"AI Agent: Final topics: {topics}")
+        else:
+            print("AI Agent: No topics found")
         
         await self.update_session()
 
