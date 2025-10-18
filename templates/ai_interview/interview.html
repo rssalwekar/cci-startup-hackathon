@@ -449,21 +449,51 @@
                 </div>
             </div>
             
-            <div class="code-editor-container">
-                <textarea class="code-editor" id="codeEditor" placeholder="Write your solution here...">def solution():
-    # Your code here
-    pass</textarea>
-                
-                <!-- Code Editor Resize Handle -->
-                <div class="resize-handle-code" id="codeResizeHandle"></div>
-                
-                <div class="output-section">
-                    <div class="output-title">Output</div>
-                    <div class="output-content" id="outputContent">Ready to run your code...</div>
-                </div>
-            </div>
-        </div>
-    </div>
+           <div class="code-editor-container">
+  <!-- MONACO EDITOR -->
+  <div id="monacoEditor" style="grid-row: 1; height: 100%; width: 100%;"></div>
+
+  <!-- Code Editor Resize Handle -->
+  <div class="resize-handle-code" id="codeResizeHandle"></div>
+
+  <div class="output-section">
+    <div class="output-title">Output</div>
+    <div class="output-content" id="outputContent">Ready to run your code...</div>
+  </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+<script>
+  let editor;
+
+  require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+  require(["vs/editor/editor.main"], function () {
+    editor = monaco.editor.create(document.getElementById('monacoEditor'), {
+      value: '# Write your Python code here',
+      language: 'python',
+      theme: 'vs-dark',
+      automaticLayout: true
+    });
+  });
+  
+  async function runCode() {
+    const code = editor.getValue();
+
+    const res = await fetch("https://emkc.org/api/v2/piston/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        language: "python3",
+        version: "3.10.0",
+        files: [{ content: code }]
+      })
+    });
+
+    const data = await res.json();
+    document.getElementById("outputContent").innerText = data.run.output;
+  }
+</script>
 
 
     <div class="status-bar">
@@ -576,20 +606,6 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        function runCode() {
-            const code = document.getElementById('codeEditor').value;
-            const outputDiv = document.getElementById('outputContent');
-            
-            // Simple Python code execution simulation
-            outputDiv.textContent = 'Running code...';
-            outputDiv.className = 'loading';
-            
-            // In a real implementation, you would send this to a code execution service
-            setTimeout(() => {
-                outputDiv.textContent = 'Code execution not implemented in demo. In production, this would execute your Python code and show results.';
-                outputDiv.className = '';
-            }, 1000);
-        }
 
         function submitCode() {
             const code = document.getElementById('codeEditor').value;
