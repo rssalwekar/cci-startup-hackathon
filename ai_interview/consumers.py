@@ -55,6 +55,8 @@ class InterviewConsumer(AsyncWebsocketConsumer):
                 await self.handle_hint_request(data)
             elif message_type == 'analyze_code':
                 await self.handle_code_analysis(data)
+            elif message_type == 'end_interview':
+                await self.handle_end_interview(data)
                 
         except json.JSONDecodeError:
             await self.send_error("Invalid JSON data")
@@ -88,6 +90,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         """Handle code submissions from the IDE."""
         code = data.get('code', '')
         language = data.get('language', 'python')
+        test_results = data.get('testResults', {})
         
         if not code.strip():
             return
@@ -95,13 +98,18 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         # Save code submission
         await self.save_code_submission(code, language)
         
+        # Analyze code with AI (include test results if available)
+        analysis = await self.analyze_code_async(code, test_results)
+        await self.send_ai_message(analysis)
+        
         # Send code to group
         await self.channel_layer.group_send(
             f"session_{self.session_id}",
             {
                 'type': 'code_submission',
                 'code': code,
-                'language': language
+                'language': language,
+                'testResults': test_results
             }
         )
 
@@ -121,6 +129,17 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         analysis = await self.analyze_code_async(code)
         await self.send_ai_message(analysis)
 
+    async def handle_end_interview(self, data):
+        """Handle end interview request."""
+        # Update session status
+        await self.update_session('completed')
+        
+        # Send final message
+        await self.send_ai_message("Thank you for the interview! Your session has been completed. You can now return to the home page.")
+        
+        # Close the WebSocket connection
+        await self.close()
+
     async def process_with_ai(self, user_message):
         """Process user message with AI agent."""
         try:
@@ -129,14 +148,29 @@ class InterviewConsumer(AsyncWebsocketConsumer):
                 # Try to extract preferences from user message
                 await self.extract_preferences(user_message)
                 
-                # Select and present problem
+                # Check if we have both difficulty and topic preferences
+                has_difficulty = bool(self.session.difficulty_preference)
+                has_topics = bool(self.session.topic_preferences)
+                
+                if not has_difficulty or not has_topics:
+                    # Ask for missing preferences
+                    missing = []
+                    if not has_difficulty:
+                        missing.append("difficulty level (easy, medium, or hard)")
+                    if not has_topics:
+                        missing.append("topic(s) you'd like to work on")
+                    
+                    await self.send_ai_message(f"I'd like to make sure I select the perfect problem for you. Could you please specify your preferred {' and '.join(missing)}?")
+                    return
+                
+                # We have both preferences, select and present problem
                 problem = await self.select_problem_async()
                 if problem:
                     await self.update_session_problem(problem)
                     problem_message = await self.present_problem_async(problem)
                     await self.send_ai_message(problem_message)
                 else:
-                    await self.send_ai_message("I'm sorry, I couldn't find a suitable problem. Let me try again.")
+                    await self.send_ai_message("I'm sorry, I couldn't find a suitable problem with those preferences. Let me try with different criteria.")
             else:
                 # Provide guidance for the current problem
                 current_code = await self.get_latest_code()
@@ -151,6 +185,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         # Simple keyword matching for now - could be enhanced with NLP
         user_message_lower = user_message.lower()
         
+        # Extract difficulty preference
         if 'easy' in user_message_lower:
             self.session.difficulty_preference = 'easy'
         elif 'medium' in user_message_lower:
@@ -158,27 +193,47 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         elif 'hard' in user_message_lower:
             self.session.difficulty_preference = 'hard'
         
-        # Extract topic preferences
+        # Extract topic preferences with more comprehensive mapping
         topics = []
         topic_keywords = {
             'array': 'arrays',
+            'arrays': 'arrays',
             'string': 'strings',
+            'strings': 'strings',
             'tree': 'trees',
+            'trees': 'trees',
             'graph': 'graphs',
+            'graphs': 'graphs',
             'dynamic programming': 'dynamic-programming',
             'dp': 'dynamic-programming',
             'binary search': 'binary-search',
             'two pointer': 'two-pointers',
+            'two pointers': 'two-pointers',
             'sliding window': 'sliding-window',
             'hash': 'hash-table',
+            'hash table': 'hash-table',
+            'hash tables': 'hash-table',
             'stack': 'stack',
+            'stacks': 'stack',
             'queue': 'queue',
-            'linked list': 'linked-list'
+            'queues': 'queue',
+            'linked list': 'linked-list',
+            'linked lists': 'linked-list',
+            'recursion': 'recursion',
+            'backtracking': 'backtracking',
+            'greedy': 'greedy',
+            'sorting': 'sorting',
+            'heap': 'heap',
+            'trie': 'trie',
+            'union find': 'union-find',
+            'segment tree': 'segment-tree',
+            'fenwick tree': 'fenwick-tree'
         }
         
         for keyword, topic in topic_keywords.items():
             if keyword in user_message_lower:
-                topics.append(topic)
+                if topic not in topics:  # Avoid duplicates
+                    topics.append(topic)
         
         if topics:
             self.session.topic_preferences = topics
@@ -295,7 +350,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         return self.ai_agent.provide_hint(self.session, hint_level)
 
     @database_sync_to_async
-    def analyze_code_async(self, code):
+    def analyze_code_async(self, code, test_results=None):
         """Async wrapper for AI agent code analysis."""
-        return self.ai_agent.analyze_code(code, self.session)
+        return self.ai_agent.analyze_code(code, self.session, test_results)
 

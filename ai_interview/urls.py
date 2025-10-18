@@ -8,5 +8,6 @@ urlpatterns = [
     path('results/<int:session_id>/', views.interview_results, name='interview_results'),
     path('api/submit-code/<int:session_id>/', views.submit_code, name='submit_code'),
     path('api/session-data/<int:session_id>/', views.get_session_data, name='get_session_data'),
+    path('get-test-cases/<int:session_id>/', views.get_test_cases, name='get_test_cases'),
 ]
 

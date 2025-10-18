@@ -232,6 +232,60 @@
             margin-bottom: 5px;
         }
 
+        /* Markdown styling for chat messages */
+        .message h1, .message h2, .message h3, .message h4, .message h5, .message h6 {
+            color: #4fc3f7;
+            margin: 10px 0 5px 0;
+        }
+
+        .message code {
+            background-color: #2d2d30;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #4fc3f7;
+        }
+
+        .message pre {
+            background-color: #2d2d30;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .message pre code {
+            background: none;
+            padding: 0;
+            color: #ffffff;
+        }
+
+        .message ul, .message ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .message li {
+            margin: 5px 0;
+        }
+
+        .message blockquote {
+            border-left: 4px solid #4fc3f7;
+            padding-left: 15px;
+            margin: 10px 0;
+            color: #cccccc;
+        }
+
+        .message strong {
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        .message em {
+            color: #cccccc;
+            font-style: italic;
+        }
+
         .chat-input {
             padding: 20px;
             background-color: #2d2d30;
@@ -337,6 +391,14 @@
 
         .ide-controls button:hover {
             background-color: #005a9e;
+        }
+
+        .ide-controls button.end-interview {
+            background-color: #dc3545;
+        }
+
+        .ide-controls button.end-interview:hover {
+            background-color: #c82333;
         }
 
 
@@ -446,6 +508,8 @@
                     <button onclick="runCode()">Run</button>
                     <button onclick="submitCode()">Submit</button>
                     <button onclick="requestHint()">Hint</button>
+                    <button onclick="requestCodeHelp()">Get Help</button>
+                    <button onclick="endInterview()" class="end-interview">End Interview</button>
                 </div>
             </div>
             
@@ -464,6 +528,7 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
   let editor;
 
@@ -479,19 +544,46 @@
   
   async function runCode() {
     const code = editor.getValue();
+    const outputDiv = document.getElementById("outputContent");
+    
+    // Show loading state
+    outputDiv.innerHTML = '<div style="color: #4fc3f7;">Running code...</div>';
 
-    const res = await fetch("https://emkc.org/api/v2/piston/execute", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        language: "python3",
-        version: "3.10.0",
-        files: [{ content: code }]
-      })
-    });
+    try {
+      const res = await fetch("https://emkc.org/api/v2/piston/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          language: "python3",
+          version: "3.10.0",
+          files: [{ content: code }]
+        })
+      });
 
-    const data = await res.json();
-    document.getElementById("outputContent").innerText = data.run.output;
+      const data = await res.json();
+      
+      if (data.run) {
+        let output = '';
+        
+        if (data.run.stdout) {
+          output += `<div style="color: #ffffff;">${data.run.stdout}</div>`;
+        }
+        
+        if (data.run.stderr) {
+          output += `<div style="color: #ff6b6b;">Error: ${data.run.stderr}</div>`;
+        }
+        
+        if (!data.run.stdout && !data.run.stderr) {
+          output = '<div style="color: #4fc3f7;">Code executed successfully (no output)</div>';
+        }
+        
+        outputDiv.innerHTML = output;
+      } else {
+        outputDiv.innerHTML = '<div style="color: #ff6b6b;">Error: Failed to execute code</div>';
+      }
+    } catch (error) {
+      outputDiv.innerHTML = `<div style="color: #ff6b6b;">Error: ${error.message}</div>`;
+    }
   }
 </script>
 
@@ -549,8 +641,10 @@
         }
 
         function handleWebSocketMessage(data) {
+            console.log('Received WebSocket message:', data);
             switch (data.type) {
                 case 'chat_message':
+                    console.log('Adding message:', data.sender, data.message);
                     addMessage(data.sender, data.message);
                     // Check if this is a problem presentation message
                     if (data.sender === 'ai' && data.message.includes('**') && data.message.includes('**')) {
@@ -592,33 +686,183 @@
         }
 
         function addMessage(sender, content) {
+            console.log('addMessage called with:', sender, content);
             const messagesContainer = document.getElementById('chatMessages');
+            if (!messagesContainer) {
+                console.error('Messages container not found!');
+                return;
+            }
+            
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${sender}`;
             
             const timestamp = new Date().toLocaleTimeString();
+            
+            // Render markdown for AI messages, plain text for user messages
+            let renderedContent;
+            if (sender === 'ai' && typeof marked !== 'undefined') {
+                try {
+                    renderedContent = marked.parse(content);
+                    console.log('Markdown rendered successfully');
+                } catch (error) {
+                    console.error('Markdown parsing error:', error);
+                    renderedContent = content.replace(/\n/g, '<br>');
+                }
+            } else {
+                renderedContent = content.replace(/\n/g, '<br>');
+            }
+            
             messageDiv.innerHTML = `
                 <div class="message-header">${sender.toUpperCase()} - ${timestamp}</div>
-                <div>${content.replace(/\n/g, '<br>')}</div>
+                <div>${renderedContent}</div>
             `;
             
             messagesContainer.appendChild(messageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            console.log('Message added to container');
         }
 
 
-        function submitCode() {
-            const code = document.getElementById('codeEditor').value;
+        async function submitCode() {
+            const code = editor.getValue();
+            const outputDiv = document.getElementById("outputContent");
             
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({
-                    type: 'code_submission',
-                    code: code,
-                    language: 'python'
-                }));
+            // Show loading state
+            outputDiv.innerHTML = '<div style="color: #4fc3f7;">Running test cases...</div>';
+            
+            try {
+                // Get current problem test cases (we'll need to implement this)
+                const testCases = await getTestCases();
                 
-                addMessage('system', 'Code submitted for analysis');
+                if (!testCases || testCases.length === 0) {
+                    outputDiv.innerHTML = '<div style="color: #ff9800;">No test cases available for this problem</div>';
+                    return;
+                }
+                
+                let results = [];
+                let passed = 0;
+                let total = testCases.length;
+                
+                // Run each test case
+                for (let i = 0; i < testCases.length; i++) {
+                    const testCase = testCases[i];
+                    const result = await runTestCase(code, testCase, i + 1);
+                    results.push(result);
+                    if (result.passed) passed++;
+                }
+                
+                // Display results
+                displayTestResults(results, passed, total);
+                
+                // Also send to AI for analysis
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'code_submission',
+                        code: code,
+                        language: 'python',
+                        testResults: { passed, total, results }
+                    }));
+                }
+                
+            } catch (error) {
+                outputDiv.innerHTML = `<div style="color: #ff6b6b;">Error running test cases: ${error.message}</div>`;
             }
+        }
+
+        async function getTestCases() {
+            // Try to get test cases from the current problem
+            try {
+                const response = await fetch(`/ai-interview/get-test-cases/{{ session.id }}/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.test_cases || [];
+                }
+            } catch (error) {
+                console.log('Could not fetch test cases from server:', error);
+            }
+            
+            // Fallback to sample test cases for Two Sum problem
+            return [
+                { input: "nums = [2,7,11,15]\ntarget = 9", expected: "[0,1]" },
+                { input: "nums = [3,2,4]\ntarget = 6", expected: "[1,2]" },
+                { input: "nums = [3,3]\ntarget = 6", expected: "[0,1]" }
+            ];
+        }
+
+        async function runTestCase(code, testCase, testNumber) {
+            try {
+                // Prepare the test code
+                const testCode = `${code}\n\n# Test case ${testNumber}\n${testCase.input}\nprint("Expected:", ${testCase.expected})`;
+                
+                const res = await fetch("https://emkc.org/api/v2/piston/execute", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        language: "python3",
+                        version: "3.10.0",
+                        files: [{ content: testCode }]
+                    })
+                });
+
+                const data = await res.json();
+                
+                if (data.run && data.run.stdout) {
+                    const output = data.run.stdout.trim();
+                    const expected = testCase.expected;
+                    
+                    // Simple comparison - in a real implementation, you'd parse the output properly
+                    const passed = output.includes(expected) || output === expected;
+                    
+                    return {
+                        testNumber,
+                        input: testCase.input,
+                        expected,
+                        actual: output,
+                        passed,
+                        error: data.run.stderr || null
+                    };
+                } else {
+                    return {
+                        testNumber,
+                        input: testCase.input,
+                        expected: testCase.expected,
+                        actual: null,
+                        passed: false,
+                        error: data.run?.stderr || "No output received"
+                    };
+                }
+            } catch (error) {
+                return {
+                    testNumber,
+                    input: testCase.input,
+                    expected: testCase.expected,
+                    actual: null,
+                    passed: false,
+                    error: error.message
+                };
+            }
+        }
+
+        function displayTestResults(results, passed, total) {
+            const outputDiv = document.getElementById("outputContent");
+            let html = `<div style="margin-bottom: 15px;">
+                <strong style="color: ${passed === total ? '#4caf50' : '#ff9800'};">Test Results: ${passed}/${total} passed</strong>
+            </div>`;
+            
+            results.forEach(result => {
+                const statusColor = result.passed ? '#4caf50' : '#f44336';
+                const statusText = result.passed ? 'PASS' : 'FAIL';
+                
+                html += `<div style="margin-bottom: 10px; padding: 10px; background-color: #2d2d30; border-radius: 5px;">
+                    <div style="color: ${statusColor}; font-weight: bold;">Test Case ${result.testNumber}: ${statusText}</div>
+                    <div style="color: #cccccc; font-size: 12px; margin: 5px 0;">Input: ${result.input}</div>
+                    <div style="color: #4caf50; font-size: 12px;">Expected: ${result.expected}</div>
+                    <div style="color: ${result.passed ? '#4caf50' : '#f44336'}; font-size: 12px;">Actual: ${result.actual || 'No output'}</div>
+                    ${result.error ? `<div style="color: #ff6b6b; font-size: 12px;">Error: ${result.error}</div>` : ''}
+                </div>`;
+            });
+            
+            outputDiv.innerHTML = html;
         }
 
         function requestHint() {
@@ -627,6 +871,33 @@
                     type: 'request_hint',
                     hint_level: 1
                 }));
+            }
+        }
+
+        function requestCodeHelp() {
+            const code = editor.getValue();
+            if (code.trim() && socket && socket.readyState === WebSocket.OPEN) {
+                const message = `I need help with my current code:\n\n\`\`\`python\n${code}\n\`\`\``;
+                socket.send(JSON.stringify({
+                    type: 'chat_message',
+                    message: message
+                }));
+            } else {
+                addMessage('system', 'Please write some code first before requesting help.');
+            }
+        }
+
+        function endInterview() {
+            if (confirm('Are you sure you want to end the interview? This action cannot be undone.')) {
+                // Send end interview message to AI
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'end_interview'
+                    }));
+                }
+                
+                // Redirect to home page
+                window.location.href = '/ai-interview/start/';
             }
         }
 

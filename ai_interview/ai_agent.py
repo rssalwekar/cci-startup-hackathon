@@ -23,7 +23,30 @@ Be encouraging, professional, and helpful. Don't give away the solution directly
 
     def get_initial_greeting(self) -> str:
         """Get the initial greeting message from the AI."""
-        return "Hello! I'm your AI interviewer today. I'm excited to conduct this coding interview with you. Let's start by getting to know your coding background and preferences. What difficulty level would you like to work on today - easy, medium, or hard?"
+        return """Hello! I'm your AI interviewer today. I'm excited to conduct this coding interview with you. 
+
+Let's start by getting to know your preferences:
+
+**What difficulty level would you like to work on?**
+- Easy
+- Medium  
+- Hard
+
+**What topic would you like to focus on?** (You can choose one or more)
+- Arrays
+- Strings
+- Trees
+- Graphs
+- Dynamic Programming
+- Binary Search
+- Two Pointers
+- Sliding Window
+- Hash Tables
+- Stacks/Queues
+- Linked Lists
+- Or any other topic you'd like to practice
+
+Please let me know both your preferred difficulty level and topic(s), and I'll select an appropriate problem for you!"""
 
     def assess_skill_level(self, user_message: str, session: InterviewSession) -> str:
         """Assess user's skill level and preferences based on their message."""
@@ -43,9 +66,12 @@ Be encouraging, professional, and helpful. Don't give away the solution directly
         difficulty = session.difficulty_preference or 'medium'
         topics = session.topic_preferences or []
         
+        print(f"AI Agent: Selecting problem with difficulty={difficulty}, topics={topics}")
+        
         # Get problems this user has already been given
         user_problems = UserProblem.objects.filter(user=session.user)
         exclude_ids = [up.problem.leetcode_id for up in user_problems if up.problem.leetcode_id]
+        print(f"AI Agent: Excluding {len(exclude_ids)} previously assigned problems")
         
         # Get a random problem from LeetCode
         topic = topics[0] if topics else None
@@ -56,6 +82,7 @@ Be encouraging, professional, and helpful. Don't give away the solution directly
         )
         
         if not leetcode_problem:
+            print("AI Agent: No problem found from LeetCode service")
             return None
         
         # Check if we already have this problem in our database
@@ -158,11 +185,32 @@ Provide helpful guidance without giving away the solution. Ask clarifying questi
         
         return f"Here's a hint to help you along: {hint}"
 
-    def analyze_code(self, code: str, session: InterviewSession) -> str:
+    def analyze_code(self, code: str, session: InterviewSession, test_results: dict = None) -> str:
         """Analyze the user's code and provide feedback."""
         problem = session.problem
         if not problem:
             return "I don't have a problem to compare your code against."
+        
+        # Build test results context if available
+        test_context = ""
+        if test_results:
+            passed = test_results.get('passed', 0)
+            total = test_results.get('total', 0)
+            test_context = f"""
+
+**Test Results: {passed}/{total} test cases passed**
+
+"""
+            if test_results.get('results'):
+                test_context += "**Detailed Test Results:**\n"
+                for result in test_results['results']:
+                    status = "✅ PASS" if result['passed'] else "❌ FAIL"
+                    test_context += f"- Test Case {result['testNumber']}: {status}\n"
+                    if not result['passed']:
+                        test_context += f"  - Expected: {result['expected']}\n"
+                        test_context += f"  - Actual: {result['actual']}\n"
+                        if result.get('error'):
+                            test_context += f"  - Error: {result['error']}\n"
         
         context = f"""Analyze this code for the problem: {problem.title}
 
@@ -171,7 +219,7 @@ Problem description: {problem.description}
 User's code:
 ```python
 {code}
-```
+```{test_context}
 
 Provide constructive feedback on:
 1. Correctness of the approach
@@ -179,6 +227,7 @@ Provide constructive feedback on:
 3. Code quality and style
 4. Potential improvements
 5. Whether it solves the problem
+6. Analysis of any failing test cases (if applicable)
 
 Be encouraging but honest. Don't give away the solution if it's incorrect."""
         
