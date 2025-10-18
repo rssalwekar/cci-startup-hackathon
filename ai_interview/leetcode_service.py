@@ -86,11 +86,15 @@ class LeetCodeService:
                 data = response.json()
                 questions = data.get('data', {}).get('problemsetQuestionList', {}).get('questions', [])
                 
+                # Filter out paid-only problems
+                questions = [q for q in questions if not q.get('paidOnly', False)]
+                
                 # Filter by topic if specified
                 if topic:
+                    topic_lower = topic.lower()
                     questions = [q for q in questions if any(
-                        topic.lower() in tag.get('slug', '').lower() or 
-                        topic.lower() in tag.get('name', '').lower()
+                        topic_lower in tag.get('slug', '').lower() or 
+                        topic_lower in tag.get('name', '').lower()
                         for tag in q.get('topicTags', [])
                     )]
                 
@@ -221,21 +225,42 @@ class LeetCodeService:
     
     def get_random_problem(self, difficulty: str = None, topic: str = None, exclude_ids: List[int] = None) -> Optional[Dict]:
         """Get a random problem matching criteria"""
+        print(f"Getting random problem with difficulty={difficulty}, topic={topic}, exclude_ids={exclude_ids}")
+        
         problems = self.get_problems(difficulty=difficulty, topic=topic, limit=100)
+        print(f"Found {len(problems)} problems from LeetCode API")
         
         if not problems:
+            print("No problems found, trying without topic filter...")
+            # Try without topic filter if no problems found
+            problems = self.get_problems(difficulty=difficulty, topic=None, limit=100)
+            print(f"Found {len(problems)} problems without topic filter")
+        
+        if not problems:
+            print("Still no problems found, trying with any difficulty...")
+            # Try with any difficulty if still no problems
+            problems = self.get_problems(difficulty=None, topic=topic, limit=100)
+            print(f"Found {len(problems)} problems with any difficulty")
+        
+        if not problems:
+            print("No problems found at all, returning None")
             return None
         
         # Filter out excluded problems
         if exclude_ids:
+            original_count = len(problems)
             problems = [p for p in problems if p.get('frontendQuestionId') not in exclude_ids]
+            print(f"Filtered out excluded problems: {original_count} -> {len(problems)}")
         
         if not problems:
+            print("All problems were excluded, returning None")
             return None
         
         # Return a random problem
         import random
-        return random.choice(problems)
+        selected = random.choice(problems)
+        print(f"Selected problem: {selected.get('title', 'Unknown')} (ID: {selected.get('frontendQuestionId', 'Unknown')})")
+        return selected
 
 
 # Global instance

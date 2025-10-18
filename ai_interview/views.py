@@ -156,3 +156,54 @@ def get_session_data(request, session_id):
     }
     
     return JsonResponse(data)
+
+
+@login_required
+def get_test_cases(request, session_id):
+    """Get test cases for the current problem in the session."""
+    session = get_object_or_404(InterviewSession, id=session_id, user=request.user)
+    
+    if not session.problem:
+        return JsonResponse({'test_cases': []})
+    
+    # Extract test cases from problem examples
+    test_cases = []
+    if session.problem.examples:
+        try:
+            # Handle both string and list formats
+            if isinstance(session.problem.examples, str):
+                examples = json.loads(session.problem.examples)
+            else:
+                examples = session.problem.examples
+                
+            for i, example in enumerate(examples):
+                if 'input' in example and 'output' in example:
+                    test_cases.append({
+                        'input': example['input'],
+                        'expected': example['output']
+                    })
+        except (json.JSONDecodeError, KeyError, TypeError):
+            pass
+    
+    # If no examples, provide some default test cases based on problem title
+    if not test_cases:
+        if 'two sum' in session.problem.title.lower():
+            test_cases = [
+                {'input': 'nums = [2,7,11,15]\ntarget = 9', 'expected': '[0,1]'},
+                {'input': 'nums = [3,2,4]\ntarget = 6', 'expected': '[1,2]'},
+                {'input': 'nums = [3,3]\ntarget = 6', 'expected': '[0,1]'}
+            ]
+        elif 'valid parentheses' in session.problem.title.lower():
+            test_cases = [
+                {'input': 's = "()"', 'expected': 'True'},
+                {'input': 's = "()[]{}"', 'expected': 'True'},
+                {'input': 's = "(]"', 'expected': 'False'}
+            ]
+        else:
+            # Generic test cases
+            test_cases = [
+                {'input': 'Test case 1', 'expected': 'Expected output 1'},
+                {'input': 'Test case 2', 'expected': 'Expected output 2'}
+            ]
+    
+    return JsonResponse({'test_cases': test_cases})
