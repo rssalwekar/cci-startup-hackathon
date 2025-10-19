@@ -1,16 +1,20 @@
 # AI Coding Interview Platform
 
-A Django-based platform that provides AI-powered coding interviews with real-time chat, problem selection, and comprehensive feedback.
+A comprehensive Django-based platform that provides AI-powered coding interviews with real-time chat, voice interaction, problem selection, and comprehensive feedback.
 
 ## Features
 
-- **AI Interview Agent**: Conducts coding interviews with personalized problem selection
+- **AI Interview Agent**: Conducts coding interviews with personalized problem selection from LeetCode
+- **Voice Interaction**: Speech-to-text and text-to-speech using ElevenLabs for natural conversation
 - **Real-time Chat**: Interactive chat interface with the AI interviewer
-- **Problem Database**: LeetCode-style problems with varying difficulty levels
-- **Code Editor**: Built-in IDE for writing and testing solutions
+- **Dynamic Problem Selection**: LeetCode API integration with difficulty and topic preferences
+- **Monaco IDE**: Built-in code editor with syntax highlighting and auto-completion
+- **Test Case Execution**: Real-time code testing with Piston API
+- **Resizable UI**: Drag-to-resize panels for optimal workspace layout
+- **Interview Recording**: Video/audio recording of interview sessions
+- **Results Page**: Comprehensive feedback with chat transcript, code, and AI analysis
 - **WebSocket Communication**: Real-time updates and chat functionality
 - **Session Management**: Track interview sessions and progress
-- **Comprehensive Feedback**: AI-generated feedback and performance analysis
 
 ### Setup Instructions
 
@@ -19,8 +23,10 @@ A Django-based platform that provides AI-powered coding interviews with real-tim
 pip install -r requirements.txt
 brew install redis
 
-# 2. Set up environment
-cp .env.example .env  # Add KRONOS_API_KEY
+# 2. Set up environment variables
+# Create .env file with:
+KRONOS_API_KEY=your_kronos_api_key_here
+ELEVEN_LABS_API_KEY=your_elevenlabs_api_key_here
 
 # 3. Run migrations
 python manage.py migrate
@@ -41,8 +47,19 @@ pkill -f daphne
    - Username: `demo`
    - Password: `demo123`
 3. Click "Start Interview" to begin
-4. Chat with the AI interviewer to set your preferences
-5. Solve the selected coding problem with real-time guidance
+4. **Set Preferences**: Tell the AI your difficulty (easy/medium/hard) and topic preferences (arrays, strings, trees, etc.)
+5. **Voice Interaction**: Use the microphone button to speak naturally with the AI
+6. **Solve Problems**: Write code in the Monaco IDE and submit to run test cases
+7. **Get Feedback**: Receive real-time AI guidance and comprehensive feedback
+8. **View Results**: After ending the interview, see detailed results with video recording and analysis
+
+### Advanced Features
+
+- **Problem Name Requests**: Ask for specific problems like "two sum" or "valid parentheses"
+- **Resizable Panels**: Drag the resize handles to customize your workspace layout
+- **Test Case Execution**: Submit code to run against LeetCode test cases
+- **Interview Recording**: Sessions are automatically recorded for review
+- **Voice Controls**: Continuous speech recognition for hands-free interaction
 
 ## Project Structure
 
@@ -78,17 +95,26 @@ The AI interview agent provides:
 - **Backend**: Django, Django REST Framework
 - **Real-time Communication**: Django Channels, WebSockets
 - **AI Integration**: Kronos Labs Hermes API
+- **Voice Services**: ElevenLabs API for natural speech synthesis
+- **Code Execution**: Piston API for running test cases
+- **Problem Database**: LeetCode GraphQL API
 - **Database**: SQLite (development), PostgreSQL (production ready)
-- **Frontend**: HTML, CSS, JavaScript
+- **Frontend**: HTML, CSS, JavaScript, Monaco Editor
 - **Message Broker**: Redis
+- **Media Handling**: Django FileField for video/audio storage
 
 ## API Endpoints
 
 - `GET /ai-interview/start/` - Start new interview
 - `GET /ai-interview/interview/<session_id>/` - Interview page
+- `GET /ai-interview/results/<session_id>/` - Interview results page
 - `POST /ai-interview/api/submit-code/<session_id>/` - Submit code
 - `GET /ai-interview/api/session-data/<session_id>/` - Get session data
-- `WebSocket /ws/interview/<session_id>/` - Real-time chat
+- `GET /ai-interview/get-function-signature/<session_id>/` - Get function signature
+- `GET /ai-interview/get-test-cases/<session_id>/` - Get test cases
+- `POST /ai-interview/api/synthesize-speech/` - Text-to-speech conversion
+- `POST /ai-interview/api/get-last-ai-message/<session_id>/` - Get last AI message for re-speak
+- `WebSocket /ws/interview/<session_id>/` - Real-time chat and code submission
 
 ## Contributing
 
