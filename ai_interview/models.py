@@ -21,6 +21,8 @@ class Problem(models.Model):
     constraints = models.TextField(blank=True)
     examples = models.JSONField(default=list)  # List of input/output examples
     hints = models.JSONField(default=list)  # Progressive hints for the problem
+    function_signature = models.TextField(blank=True)  # Generated function signature
+    test_cases = models.JSONField(default=list)  # Generated test cases
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
@@ -40,6 +42,7 @@ class InterviewSession(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='preparing')
     difficulty_preference = models.CharField(max_length=10, choices=Problem.DIFFICULTY_CHOICES, null=True, blank=True)
     topic_preferences = models.JSONField(default=list)
+    problem_name_request = models.CharField(max_length=200, blank=True)  # Store specific problem name requests
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     ai_feedback = models.TextField(blank=True)
@@ -90,3 +93,17 @@ class UserProblem(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.problem.title}"
+
+
+class InterviewRecording(models.Model):
+    """Store interview session recordings and metadata"""
+    session = models.OneToOneField(InterviewSession, on_delete=models.CASCADE, related_name='recording')
+    video_file = models.FileField(upload_to='interview_recordings/', null=True, blank=True)
+    audio_file = models.FileField(upload_to='interview_recordings/', null=True, blank=True)
+    screen_recording = models.FileField(upload_to='interview_recordings/', null=True, blank=True)
+    recording_started_at = models.DateTimeField(auto_now_add=True)
+    recording_ended_at = models.DateTimeField(null=True, blank=True)
+    duration_seconds = models.IntegerField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"Recording for session {self.session.id}"

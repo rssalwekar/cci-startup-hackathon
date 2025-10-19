@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 import json
-from .models import InterviewSession, ChatMessage, CodeSubmission, Problem
+from .models import InterviewSession, ChatMessage, CodeSubmission, Problem, InterviewRecording
 from .ai_agent import AIInterviewAgent
 from .voice_service import voice_service
 
@@ -52,17 +52,38 @@ def complete_interview(request, session_id):
     session = get_object_or_404(InterviewSession, id=session_id, user=request.user)
     
     if request.method == 'POST':
-        # Generate AI feedback
-        ai_agent = AIInterviewAgent()
-        feedback = ai_agent.generate_feedback(session)
-        
-        # Update session
-        session.status = 'completed'
-        session.completed_at = timezone.now()
-        session.ai_feedback = feedback
-        session.save()
-        
-        return redirect('interview_results', session_id=session.id)
+        try:
+            # Generate AI feedback
+            ai_agent = AIInterviewAgent()
+            feedback = ai_agent.generate_feedback(session)
+            
+            # Update session
+            session.status = 'completed'
+            session.completed_at = timezone.now()
+            session.ai_feedback = feedback
+            session.save()
+            
+            # Check if this is an AJAX request
+            if request.headers.get('Content-Type') == 'application/json':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Interview completed and feedback generated successfully',
+                    'feedback': feedback
+                })
+            else:
+                return redirect('interview_results', session_id=session.id)
+                
+        except Exception as e:
+            # Handle errors gracefully
+            if request.headers.get('Content-Type') == 'application/json':
+                return JsonResponse({
+                    'success': False,
+                    'error': str(e)
+                }, status=500)
+            else:
+                # For non-AJAX requests, still redirect but log the error
+                print(f"Error generating feedback: {e}")
+                return redirect('interview_results', session_id=session.id)
     
     return render(request, 'ai_interview/complete_interview.html', {'session': session})
 
@@ -76,10 +97,17 @@ def interview_results(request, session_id):
     messages = ChatMessage.objects.filter(session=session).order_by('timestamp')
     code_submissions = CodeSubmission.objects.filter(session=session).order_by('timestamp')
     
+    # Try to get recording data
+    try:
+        recording = session.recording
+    except:
+        recording = None
+    
     context = {
         'session': session,
         'messages': messages,
         'code_submissions': code_submissions,
+        'recording': recording,
     }
     
     return render(request, 'ai_interview/results.html', context)
@@ -167,9 +195,20 @@ def get_test_cases(request, session_id):
     if not session.problem:
         return JsonResponse({'test_cases': []})
     
-    # Extract test cases from problem examples
+    # Use dynamically generated test cases if available
     test_cases = []
-    if session.problem.examples:
+    if session.problem.test_cases:
+        try:
+            # Handle both string and list formats
+            if isinstance(session.problem.test_cases, str):
+                test_cases = json.loads(session.problem.test_cases)
+            else:
+                test_cases = session.problem.test_cases
+        except (json.JSONDecodeError, KeyError, TypeError):
+            pass
+    
+    # Fallback to examples if no test cases
+    if not test_cases and session.problem.examples:
         try:
             # Handle both string and list formats
             if isinstance(session.problem.examples, str):
@@ -208,6 +247,20 @@ def get_test_cases(request, session_id):
             ]
     
     return JsonResponse({'test_cases': test_cases})
+
+
+@login_required
+def get_function_signature(request, session_id):
+    """Get function signature for the current problem in the session."""
+    session = get_object_or_404(InterviewSession, id=session_id, user=request.user)
+    
+    if not session.problem:
+        return JsonResponse({'function_signature': ''})
+    
+    # Return the dynamically generated function signature
+    function_signature = session.problem.function_signature or ''
+    
+    return JsonResponse({'function_signature': function_signature})
 
 
 @login_required
@@ -286,6 +339,106 @@ def get_last_ai_message(request, session_id):
                 'success': False,
                 'error': 'No AI messages found in this session'
             }, status=404)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def start_recording(request, session_id):
+    """Start recording the interview session."""
+    try:
+        session = get_object_or_404(InterviewSession, id=session_id, user=request.user)
+        
+        # Create or get existing recording
+        recording, created = InterviewRecording.objects.get_or_create(
+            session=session,
+            defaults={'recording_started_at': timezone.now()}
+        )
+        
+        if not created:
+            # Update existing recording
+            recording.recording_started_at = timezone.now()
+            recording.recording_ended_at = None
+            recording.duration_seconds = None
+            recording.save()
+        
+        return JsonResponse({
+            'success': True,
+            'recording_id': recording.id,
+            'message': 'Recording started successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def stop_recording(request, session_id):
+    """Stop recording the interview session."""
+    try:
+        session = get_object_or_404(InterviewSession, id=session_id, user=request.user)
+        
+        try:
+            recording = session.recording
+            recording.recording_ended_at = timezone.now()
             
+            # Calculate duration
+            if recording.recording_started_at:
+                duration = recording.recording_ended_at - recording.recording_started_at
+                recording.duration_seconds = int(duration.total_seconds())
+            
+            recording.save()
+            
+            return JsonResponse({
+                'success': True,
+                'duration_seconds': recording.duration_seconds,
+                'message': 'Recording stopped successfully'
+            })
+            
+        except InterviewRecording.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'No recording found for this session'
+            }, status=404)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def upload_video(request):
+    """Upload video recording for an interview session."""
+    try:
+        session_id = request.POST.get('session_id')
+        if not session_id:
+            return JsonResponse({'error': 'Session ID required'}, status=400)
+        
+        session = get_object_or_404(InterviewSession, id=session_id, user=request.user)
+        
+        if 'video' not in request.FILES:
+            return JsonResponse({'error': 'No video file provided'}, status=400)
+        
+        video_file = request.FILES['video']
+        
+        # Get or create recording object
+        recording, created = InterviewRecording.objects.get_or_create(
+            session=session,
+            defaults={'recording_started_at': timezone.now()}
+        )
+        
+        # Save the video file
+        recording.video_file = video_file
+        recording.save()
+        
+        return JsonResponse({
+            'success': True,
+            'video_url': recording.video_file.url,
+            'message': 'Video uploaded successfully'
+        })
+        
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)

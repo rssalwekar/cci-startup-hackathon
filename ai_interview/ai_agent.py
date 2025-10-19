@@ -46,21 +46,35 @@ Tell me both and I'll pick a problem for you!"""
         """Select an appropriate problem from LeetCode based on user preferences."""
         difficulty = session.difficulty_preference or 'medium'
         topics = session.topic_preferences or []
+        problem_name_request = getattr(session, 'problem_name_request', None)
         
-        print(f"AI Agent: Selecting problem with difficulty={difficulty}, topics={topics}")
+        print(f"AI Agent: Selecting problem with difficulty={difficulty}, topics={topics}, problem_name_request={problem_name_request}")
         
-        # Get problems this user has already been given
-        user_problems = UserProblem.objects.filter(user=session.user)
-        exclude_ids = [up.problem.leetcode_id for up in user_problems if up.problem.leetcode_id]
-        print(f"AI Agent: Excluding {len(exclude_ids)} previously assigned problems")
+        # If user requested a specific problem by name, try to find it first
+        leetcode_problem = None
+        if problem_name_request:
+            print(f"AI Agent: Searching for specific problem: '{problem_name_request}'")
+            leetcode_problem = leetcode_service.search_problem_by_name(problem_name_request)
+            
+            if leetcode_problem:
+                print(f"AI Agent: Found requested problem: {leetcode_problem['title']}")
+            else:
+                print(f"AI Agent: Could not find requested problem '{problem_name_request}', falling back to random selection")
         
-        # Get a random problem from LeetCode
-        topic = topics[0] if topics else None
-        leetcode_problem = leetcode_service.get_random_problem(
-            difficulty=difficulty,
-            topic=topic,
-            exclude_ids=exclude_ids
-        )
+        # If no specific problem found or requested, get a random problem
+        if not leetcode_problem:
+            # Get problems this user has already been given
+            user_problems = UserProblem.objects.filter(user=session.user)
+            exclude_ids = [up.problem.leetcode_id for up in user_problems if up.problem.leetcode_id]
+            print(f"AI Agent: Excluding {len(exclude_ids)} previously assigned problems")
+            
+            # Get a random problem from LeetCode
+            topic = topics[0] if topics else None
+            leetcode_problem = leetcode_service.get_random_problem(
+                difficulty=difficulty,
+                topic=topic,
+                exclude_ids=exclude_ids
+            )
         
         if not leetcode_problem:
             print("AI Agent: No problem found from LeetCode service")
@@ -69,7 +83,28 @@ Tell me both and I'll pick a problem for you!"""
         # Check if we already have this problem in our database
         problem = Problem.objects.filter(leetcode_id=leetcode_problem['frontendQuestionId']).first()
         
-        if not problem:
+        if problem:
+            print(f"Using existing problem: {problem.title}")
+            # If the existing problem doesn't have a function signature, generate it
+            if not problem.function_signature:
+                print(f"Existing problem missing function signature, generating...")
+                function_signature = leetcode_service.get_official_function_signature(
+                    leetcode_problem['titleSlug']
+                )
+                if not function_signature:
+                    print(f"No official function signature found for {leetcode_problem['titleSlug']}, using generated one")
+                    details = leetcode_service.get_problem_details(leetcode_problem['titleSlug'])
+                    if details:
+                        function_signature = leetcode_service.extract_function_signature(
+                            details.get('content', ''), 
+                            leetcode_problem['title']
+                        )
+                
+                if function_signature:
+                    problem.function_signature = function_signature
+                    problem.save()
+                    print(f"Updated function signature for existing problem: {len(function_signature)} chars")
+        else:
             # Fetch detailed problem content
             details = leetcode_service.get_problem_details(leetcode_problem['titleSlug'])
             if not details:
@@ -77,6 +112,37 @@ Tell me both and I'll pick a problem for you!"""
             
             # Parse the content
             parsed_content = leetcode_service.parse_problem_content(details.get('content', ''))
+            
+            # Get official function signature and test cases from LeetCode
+            print(f"Getting official data for {leetcode_problem['titleSlug']}")
+            function_signature = leetcode_service.get_official_function_signature(
+                leetcode_problem['titleSlug']
+            )
+            test_cases = leetcode_service.get_official_test_cases(
+                leetcode_problem['titleSlug']
+            )
+            
+            print(f"Official function signature length: {len(function_signature) if function_signature else 0}")
+            print(f"Official test cases count: {len(test_cases) if test_cases else 0}")
+            
+            # Fallback to generated ones if official ones are not available
+            if not function_signature:
+                print(f"No official function signature found for {leetcode_problem['titleSlug']}, using generated one")
+                function_signature = leetcode_service.extract_function_signature(
+                    details.get('content', ''), 
+                    leetcode_problem['title']
+                )
+            
+            if not test_cases:
+                print(f"No official test cases found for {leetcode_problem['titleSlug']}, using generated ones")
+                test_cases = leetcode_service.generate_test_cases(
+                    parsed_content.get('examples', []), 
+                    leetcode_problem['title']
+                )
+            
+            print(f"Final function signature length: {len(function_signature) if function_signature else 0}")
+            print(f"Final test cases count: {len(test_cases) if test_cases else 0}")
+            print(f"Final function signature content: {repr(function_signature)}")
             
             # Create new problem in database
             problem = Problem.objects.create(
@@ -87,15 +153,26 @@ Tell me both and I'll pick a problem for you!"""
                 difficulty=leetcode_problem['difficulty'].lower(),
                 topics=[tag['slug'] for tag in leetcode_problem.get('topicTags', [])],
                 constraints=parsed_content.get('constraints', ''),
-                examples=parsed_content.get('examples', [])
+                examples=parsed_content.get('examples', []),
+                function_signature=function_signature,
+                test_cases=test_cases
             )
+            
+            print(f"Problem created with ID: {problem.id}")
+            print(f"Saved function signature length: {len(problem.function_signature) if problem.function_signature else 0}")
+            print(f"Saved function signature content: {repr(problem.function_signature)}")
         
         # Record that this user has been given this problem
-        UserProblem.objects.get_or_create(
+        user_problem, created = UserProblem.objects.get_or_create(
             user=session.user,
             problem=problem,
-            session=session
+            defaults={'session': session}
         )
+        
+        # If the record already existed, update the session
+        if not created:
+            user_problem.session = session
+            user_problem.save()
         
         return problem
 
@@ -197,27 +274,67 @@ Give brief feedback on correctness, complexity, and improvements. Max 3 sentence
         
         code_summary = "Code Submissions:\n"
         for submission in code_submissions:
-            code_summary += f"Submission at {submission.timestamp}:\n{submission.code}\n\n"
+            code_summary += f"Submission at {submission.timestamp}:\n"
+            code_summary += f"Language: {submission.language}\n"
+            code_summary += f"Code:\n{submission.code}\n"
+            if hasattr(submission, 'test_results') and submission.test_results:
+                code_summary += f"Test Results: {submission.test_results}\n"
+            code_summary += "\n"
         
         context = f"""Generate comprehensive interview feedback based on this coding interview session.
 
 Problem: {session.problem.title if session.problem else 'No problem selected'}
 Difficulty: {session.difficulty_preference}
+Duration: {session.started_at} to {session.completed_at if session.completed_at else 'ongoing'}
 
 {conversation_summary}
 
 {code_summary}
 
-Provide feedback on:
-1. Problem-solving approach
-2. Communication skills
-3. Code quality
-4. Areas of strength
-5. Areas for improvement
-6. Overall performance rating (1-10)
-7. Specific recommendations for future practice
+Provide detailed feedback covering:
 
-Be constructive, specific, and encouraging."""
+**1. Problem-Solving Approach**
+- How well did they understand the problem?
+- Did they ask clarifying questions?
+- Was their approach logical and systematic?
+
+**2. Communication Skills**
+- How clearly did they explain their thinking?
+- Did they communicate their approach effectively?
+- How well did they respond to guidance?
+
+**3. Code Quality**
+- Code correctness and functionality
+- Code organization and structure
+- Variable naming and readability
+- Algorithm efficiency
+- Edge case handling
+
+**4. Technical Skills**
+- Programming language proficiency
+- Algorithm and data structure knowledge
+- Debugging skills
+- Testing approach
+
+**5. Areas of Strength**
+- What did they do well?
+- Specific positive observations
+
+**6. Areas for Improvement**
+- Specific areas that need work
+- Concrete suggestions for improvement
+
+**7. Overall Assessment**
+- Performance rating (1-10 scale)
+- Readiness level (Junior/Mid/Senior)
+- Specific next steps for development
+
+**8. Recommendations**
+- Specific practice suggestions
+- Resources for improvement
+- Focus areas for next interview
+
+Be constructive, specific, encouraging, and actionable. Use examples from their code and conversation."""
         
         prompt = f"You are an experienced technical interviewer providing comprehensive feedback. Be detailed, constructive, and encouraging.\n\n{context}"
         
