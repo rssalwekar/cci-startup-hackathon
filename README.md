@@ -17,28 +17,48 @@ A Django-based platform that provides AI-powered coding interviews with real-tim
 ```bash
 # 1. Install dependencies
 pip install -r requirements.txt
-brew install redis
 
 # 2. Set up environment
-cp .env.example .env  # Add KRONOS_API_KEY
+cp .env.example .env  # Add KRONOS_API_KEY, SUPABASE credentials
 
 # 3. Run migrations
 python manage.py migrate
-python manage.py create_demo_user
 
-# 4. Start services
+# 4. Create a user account (or use signup page)
+python manage.py createsuperuser
+```
+
+### Starting the Application
+
+**Option 1: Automated Startup (Windows with WSL - Recommended)**
+```powershell
+# Starts Redis and Django server automatically
+.\start.ps1
+```
+
+**Option 2: Manual Startup**
+```powershell
+# Start Redis (if not already running)
+.\start-redis.ps1
+
+# Start Django server
 python -m daphne -b 127.0.0.1 -p 8000 interview_platform.asgi:application
+```
 
-# 5. Kill server
-pkill -f daphne
+**Option 3: Individual Commands**
+```bash
+# Terminal 1: Start Redis in WSL
+wsl redis-server --bind 0.0.0.0 --protected-mode no --daemonize yes
+
+# Terminal 2: Start Django
+python -m daphne -b 127.0.0.1 -p 8000 interview_platform.asgi:application
 ```
 
 ### Usage
 
 1. Navigate to `http://127.0.0.1:8000/`
-2. Login with demo credentials:
-   - Username: `demo`
-   - Password: `demo123`
+2. Sign up for a new account at `/accounts/signup/` or login
+3. Complete your profile and upload an avatar (optional)
 3. Click "Start Interview" to begin
 4. Chat with the AI interviewer to set your preferences
 5. Solve the selected coding problem with real-time guidance

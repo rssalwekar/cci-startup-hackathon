@@ -9,6 +9,7 @@ import json
 from .models import InterviewSession, ChatMessage, CodeSubmission, Problem
 from .ai_agent import AIInterviewAgent
 from .voice_service import voice_service
+from django.contrib.auth import get_user_model
 
 
 @login_required
@@ -30,6 +31,19 @@ def interview_page(request, session_id):
     }
     
     return render(request, 'ai_interview/interview.html', context)
+
+
+def home(request):
+    """Public home page with CTA to start an interview."""
+    # If the user is authenticated, show a CTA to start an interview directly
+    start_url = '/accounts/login/?next=/ai-interview/start/'
+    if request.user.is_authenticated:
+        start_url = '/ai-interview/start/'
+
+    context = {
+        'start_url': start_url,
+    }
+    return render(request, 'ai_interview/home.html', context)
 
 
 @login_required

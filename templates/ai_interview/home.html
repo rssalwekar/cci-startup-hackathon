@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - AI Interview Platform{% endblock %}
+
+{% block content %}
+<div class="hero" style="display:flex;align-items:center;justify-content:center;padding:60px 20px;">
+  <div style="max-width:1000px;text-align:center;">
+    <h1 style="font-size:42px;margin-bottom:10px;">AI Coding Interview Platform</h1>
+    <p style="font-size:18px;color:#555;margin-bottom:24px;">Practice real-world coding interviews with an AI interviewer, get real-time guidance, and receive a detailed performance report with recordings and feedback.</p>
+
+    <a href="{{ start_url }}" class="btn" style="display:inline-block;padding:18px 36px;background:#1f6feb;color:#fff;border-radius:8px;font-size:18px;text-decoration:none;">Start Interview</a>
+
+    <div style="margin-top:28px;color:#666;">
+      <strong>Features:</strong>
+      <ul style="list-style:disc;margin-left:20px;text-align:left;display:inline-block;">
+        <li>AI-driven problem selection and feedback</li>
+        <li>Real-time chat and code editor</li>
+        <li>Recording storage and playback</li>
+        <li>Profile tracking and interview history</li>
+      </ul>
+    </div>
+
+    <p style="margin-top:28px;color:#888;font-size:14px;">Already have an account? <a href="{% url 'login' %}">Log in</a> or <a href="{% url 'signup' %}">Sign up</a>.</p>
+  </div>
+</div>
+{% endblock %}

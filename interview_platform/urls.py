@@ -20,15 +20,15 @@ from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from django.shortcuts import redirect
 from ai_interview import auth_views as custom_auth_views
+from ai_interview import views as interview_views
 
 def home_redirect(request):
-    if request.user.is_authenticated:
-        return redirect('start_interview')
-    return redirect('login')
+    # Keep the redirect helper for backwards compatibility
+    return interview_views.home(request)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", home_redirect, name='home'),
+    path("", interview_views.home, name='home'),
     path("ai-interview/", include('ai_interview.urls')),
     
     # Authentication
