@@ -897,12 +897,21 @@
                 let passed = 0;
                 let total = testCases.length;
                 
-                // Run each test case
+                // Run each test case with a small delay to avoid rate limiting
                 for (let i = 0; i < testCases.length; i++) {
                     const testCase = testCases[i];
+                    
+                    // Show progress
+                    outputDiv.innerHTML = `<div style="color: #4fc3f7;">Running test case ${i + 1}/${total}...</div>`;
+                    
                     const result = await runTestCase(code, testCase, i + 1);
                     results.push(result);
                     if (result.passed) passed++;
+                    
+                    // Small delay between requests to avoid overwhelming Piston API
+                    if (i < testCases.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
                 }
                 
                 // Display results
@@ -967,6 +976,8 @@
                 return 'digits';
             } else if (input.includes('strs =')) {
                 return 'strs';
+            } else if (input.includes('nums =')) {
+                return 'nums';
             } else if (input.includes('root =')) {
                 return 'root';
             } else if (input.includes('s =')) {
@@ -1015,6 +1026,53 @@
             }
         }
 
+        function parseTestInput(input) {
+            // Smart parser that handles complex inputs without breaking arrays/objects
+            // Convert null to None for Python
+            let processedInput = input.replace(/null/g, 'None').replace(/true/g, 'True').replace(/false/g, 'False');
+            
+            // If input doesn't contain '=', it's a direct value
+            if (!processedInput.includes('=')) {
+                return processedInput;
+            }
+            
+            // Parse assignments intelligently by finding '=' and extracting key-value pairs
+            const assignments = [];
+            let currentPos = 0;
+            
+            while (currentPos < processedInput.length) {
+                // Find next '=' sign
+                const equalPos = processedInput.indexOf('=', currentPos);
+                if (equalPos === -1) break;
+                
+                // Extract variable name (everything before '=' trimmed)
+                const varStart = processedInput.lastIndexOf(',', equalPos);
+                const varName = processedInput.substring(varStart === -1 ? 0 : varStart + 1, equalPos).trim();
+                
+                // Extract value (everything after '=' until next variable or end)
+                let valueStart = equalPos + 1;
+                let valueEnd = processedInput.length;
+                
+                // Find where this value ends by looking for next variable pattern
+                // Pattern: ", varname ="
+                const nextVarMatch = processedInput.substring(valueStart).match(/,\s*\w+\s*=/);
+                if (nextVarMatch) {
+                    valueEnd = valueStart + nextVarMatch.index;
+                }
+                
+                const value = processedInput.substring(valueStart, valueEnd).trim();
+                
+                // Add assignment
+                if (varName && value) {
+                    assignments.push(`${varName} = ${value}`);
+                }
+                
+                currentPos = valueEnd;
+            }
+            
+            return assignments.join('\n');
+        }
+
         async function runTestCase(code, testCase, testNumber) {
             try {
                 // Get the current problem from the problem window
@@ -1033,29 +1091,13 @@
                         const methodName = methodMatch[1];
                         const args = extractFunctionArgs(testCase.input);
                         
-                        // Convert null to None for Python compatibility
-                        let processedInput = testCase.input.replace(/null/g, 'None');
+                        // Use smart parser that handles arrays properly
+                        const variableAssignments = parseTestInput(testCase.input);
                         
-                        // Parse the input to create proper Python variable assignments
-                        const inputLines = processedInput.split(',').map(line => line.trim());
-                        const variableAssignments = inputLines.map(line => {
-                            if (line.includes('=')) {
-                                return line;
-                            }
-                            return line;
-                        }).join('\n');
-                        
-                        testCode += `\n\n# Test case ${testNumber}\n${variableAssignments}\nsolution = Solution()\nresult = solution.${methodName}(${args})\nprint("Result:", result)\nprint("Expected:", ${JSON.stringify(testCase.expected)})`;
+                        testCode += `\n\n# Test case ${testNumber}\n${variableAssignments}\ntry:\n    solution = Solution()\n    result = solution.${methodName}(${args})\n    print(result)\nexcept Exception as e:\n    print(f"Error: {e}")`;
                     } else {
-                        let processedInput = testCase.input.replace(/null/g, 'None');
-                        const inputLines = processedInput.split(',').map(line => line.trim());
-                        const variableAssignments = inputLines.map(line => {
-                            if (line.includes('=')) {
-                                return line;
-                            }
-                            return line;
-                        }).join('\n');
-                        testCode += `\n\n# Test case ${testNumber}\n${variableAssignments}\nsolution = Solution()\nprint("Expected:", ${JSON.stringify(testCase.expected)})`;
+                        const variableAssignments = parseTestInput(testCase.input);
+                        testCode += `\n\n# Test case ${testNumber}\n${variableAssignments}\ntry:\n    solution = Solution()\n    print("No method found")\nexcept Exception as e:\n    print(f"Error: {e}")`;
                     }
                 } else {
                     // Handle standalone function format
@@ -1064,72 +1106,96 @@
                         const functionName = functionMatch[1];
                         const args = extractFunctionArgs(testCase.input);
                         
-                        // Convert null to None for Python compatibility
-                        let processedInput = testCase.input.replace(/null/g, 'None');
+                        // Use smart parser that handles arrays properly
+                        const variableAssignments = parseTestInput(testCase.input);
                         
-                        // Parse the input to create proper Python variable assignments
-                        const inputLines = processedInput.split(',').map(line => line.trim());
-                        const variableAssignments = inputLines.map(line => {
-                            if (line.includes('=')) {
-                                return line;
-                            }
-                            return line;
-                        }).join('\n');
-                        
-                        testCode += `\n\n# Test case ${testNumber}\n${variableAssignments}\nresult = ${functionName}(${args})\nprint("Result:", result)\nprint("Expected:", ${JSON.stringify(testCase.expected)})`;
+                        testCode += `\n\n# Test case ${testNumber}\n${variableAssignments}\ntry:\n    result = ${functionName}(${args})\n    print(result)\nexcept Exception as e:\n    print(f"Error: {e}")`;
                     } else {
-                        // Fallback: just print the input and expected output
-                        let processedInput = testCase.input.replace(/null/g, 'None');
-                        const inputLines = processedInput.split(',').map(line => line.trim());
-                        const variableAssignments = inputLines.map(line => {
-                            if (line.includes('=')) {
-                                return line;
-                            }
-                            return line;
-                        }).join('\n');
-                        testCode += `\n\n# Test case ${testNumber}\n${variableAssignments}\nprint("Expected:", ${JSON.stringify(testCase.expected)})`;
+                        // Fallback: just print error
+                        const variableAssignments = parseTestInput(testCase.input);
+                        testCode += `\n\n# Test case ${testNumber}\n${variableAssignments}\nprint("No function found")`;
                     }
                 }
                 
-                const res = await fetch("https://emkc.org/api/v2/piston/execute", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        language: "python3",
-                        version: "3.10.0",
-                        files: [{ content: testCode }]
-                    })
-                });
-
-                const data = await res.json();
+                // Execute code with timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
                 
-                if (data.run && data.run.stdout) {
-                    const output = data.run.stdout.trim();
-                    const expected = testCase.expected;
+                try {
+                    const res = await fetch("https://emkc.org/api/v2/piston/execute", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            language: "python3",
+                            version: "3.10.0",
+                            files: [{ content: testCode }]
+                        }),
+                        signal: controller.signal
+                    });
                     
-                    // Better comparison logic
+                    clearTimeout(timeoutId);
+
+                    if (!res.ok) {
+                        return {
+                            testNumber,
+                            input: testCase.input,
+                            expected: testCase.expected,
+                            actual: null,
+                            passed: false,
+                            error: `HTTP ${res.status}: ${res.statusText}`
+                        };
+                    }
+
+                    const data = await res.json();
+                    
+                    if (data.run && data.run.stdout) {
+                        const output = data.run.stdout.trim();
+                        const expected = testCase.expected;
+                    
+                    // Output is now just the result value (no "Result:" prefix)
+                    let actualResult = output;
                     let passed = false;
-                    if (output.includes("Result:")) {
-                        const resultLine = output.split('\n').find(line => line.includes("Result:"));
-                        if (resultLine) {
-                            const actualResult = resultLine.split("Result:")[1].trim();
-                            // Compare actual result with expected
-                            passed = actualResult === expected || 
-                                    actualResult === expected.replace(/"/g, '') ||
-                                    actualResult.toLowerCase() === expected.toLowerCase();
-                        }
-                    } else {
-                        // Fallback to simple comparison
-                        passed = output.includes(expected) || output === expected;
+                    
+                    // Check if output contains an error
+                    if (output.startsWith("Error:")) {
+                        return {
+                            testNumber,
+                            input: testCase.input,
+                            expected,
+                            actual: null,
+                            passed: false,
+                            error: output
+                        };
+                    }
+                    
+                    // Normalize values for comparison
+                    if (actualResult) {
+                        // Convert string representations to comparable values
+                        const normalizedActual = actualResult.toString().toLowerCase().trim();
+                        const normalizedExpected = expected.toString().toLowerCase().trim();
+                        
+                        // Direct comparison
+                        passed = normalizedActual === normalizedExpected ||
+                                actualResult == expected || // Loose equality for type conversion
+                                actualResult === expected;
                     }
                     
                     return {
                         testNumber,
                         input: testCase.input,
                         expected,
-                        actual: output,
+                        actual: actualResult,
                         passed,
                         error: data.run.stderr || null
+                    };
+                } else if (data.run && data.run.stderr) {
+                    return {
+                        testNumber,
+                        input: testCase.input,
+                        expected: testCase.expected,
+                        actual: null,
+                        passed: false,
+                        error: data.run.stderr
                     };
                 } else {
                     return {
@@ -1138,7 +1204,30 @@
                         expected: testCase.expected,
                         actual: null,
                         passed: false,
-                        error: data.run?.stderr || "No output received"
+                        error: data.run?.stderr || data.compile?.stderr || "No output received - code may have crashed"
+                    };
+                }
+                } catch (fetchError) {
+                    clearTimeout(timeoutId);
+                    
+                    if (fetchError.name === 'AbortError') {
+                        return {
+                            testNumber,
+                            input: testCase.input,
+                            expected: testCase.expected,
+                            actual: null,
+                            passed: false,
+                            error: "Execution timeout (10 seconds) - code may be stuck in infinite loop"
+                        };
+                    }
+                    
+                    return {
+                        testNumber,
+                        input: testCase.input,
+                        expected: testCase.expected,
+                        actual: null,
+                        passed: false,
+                        error: `Network error: ${fetchError.message}`
                     };
                 }
             } catch (error) {
