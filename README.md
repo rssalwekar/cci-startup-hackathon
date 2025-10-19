@@ -27,7 +27,6 @@ python manage.py migrate
 python manage.py create_demo_user
 
 # 4. Start services
-brew services start redis
 python -m daphne -b 127.0.0.1 -p 8000 interview_platform.asgi:application
 
 # 5. Kill server

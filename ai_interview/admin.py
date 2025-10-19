@@ -1,5 +1,13 @@
 from django.contrib import admin
-from .models import Problem, InterviewSession, ChatMessage, CodeSubmission, UserProblem
+from .models import Problem, InterviewSession, ChatMessage, CodeSubmission, UserProblem, UserProfile
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'location', 'preferred_language', 'total_interviews', 'average_score']
+    list_filter = ['preferred_language', 'created_at']
+    search_fields = ['user__username', 'user__email', 'location']
+    readonly_fields = ['created_at', 'updated_at', 'total_interviews', 'total_problems_solved', 'average_score']
 
 
 @admin.register(Problem)

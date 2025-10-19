@@ -135,7 +135,7 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         await self.update_session('completed')
         
         # Send final message
-        await self.send_ai_message("Thank you for the interview! Your session has been completed. You can now return to the home page.")
+        await self.send_ai_message("Thank you for the interview! Your session has been completed. Redirecting you to your profile where you can review your interview...")
         
         # Close the WebSocket connection
         await self.close()

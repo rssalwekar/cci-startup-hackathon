@@ -135,13 +135,18 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [("172.27.247.142", 6379)],
         },
     },
 }
 
 # Kronos Labs API Key
 KRONOS_API_KEY = os.getenv('KRONOS_API_KEY')
+
+# Supabase Configuration
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+SUPABASE_BUCKET = os.getenv('SUPABASE_BUCKET', 'interview-recordings')
 
 # Static files configuration
 STATICFILES_DIRS = [
@@ -150,3 +155,12 @@ STATICFILES_DIRS = [
 
 # Template directories
 TEMPLATES[0]['DIRS'] = [BASE_DIR / "templates"]
+
+# Media files configuration
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Login configuration
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/ai-interview/start/'
+LOGOUT_REDIRECT_URL = '/accounts/login/'
