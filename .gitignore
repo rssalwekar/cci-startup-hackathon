@@ -48,6 +48,10 @@ media/
 *.p12
 *.pfx
 
+# Redis
+dump.rdb
+*.rdb
+
 # IDE
 .vscode/
 .idea/
