@@ -35,11 +35,10 @@ With ElevenLabs integration, you get:
 
 ### 4. Usage
 
-- **Continuous Listening**: 🎯 button enables natural speech interaction (like OpenAI's speech model)
+- **Voice Input**: 🎤 button toggles continuous speech recognition (like OpenAI's speech model)
 - **Auto-speak**: AI responses are automatically spoken when received
 - **Manual Control**: Click the 🔊 button to replay the last AI message
 - **Re-speak Last Message**: Click the 🔁 button to replay the last AI message (saves API calls!)
-- **Voice Input**: Use the 🎤 button for one-time speech-to-text input
 - **Character Counter**: Shows current usage vs. free tier limit (10,000 chars)
 
 ### 5. Character Optimization
@@ -50,7 +49,7 @@ The system is optimized to minimize character usage:
 - **Text Cleaning**: Removes unnecessary words and phrases before speech synthesis
 - **Audio Caching**: Reuses generated audio for identical text (saves API calls!)
 - **Re-speak Feature**: 🔁 button replays last AI message without new API calls
-- **Continuous Listening**: Natural speech interaction without button clicks
+- **Single Voice Button**: One button for all voice input needs
 - **Smart Fallback**: Uses browser TTS if ElevenLabs is unavailable
 - **Usage Tracking**: Real-time character counter with warning indicators
 
@@ -72,7 +71,7 @@ For production use, consider upgrading to a paid plan for higher limits and prem
 
 If voice features aren't working:
 
-1. **Microphone Access**: Click the 🎯 button to enable continuous listening (requires user interaction)
+1. **Microphone Access**: Click the 🎤 button to enable voice input (requires user interaction)
 2. **Permission Issues**: Allow microphone access when prompted by your browser
 3. **API Key**: Check that `ELEVENLABS_API_KEY` is set correctly in your .env file
 4. **Character Limits**: Verify your ElevenLabs account has remaining character credits
@@ -80,7 +79,7 @@ If voice features aren't working:
 6. **Network Issues**: Ensure stable internet connection for speech recognition
 
 **Common Issues:**
-- **"Microphone access denied"**: Click the 🎯 button and allow microphone access
+- **"Microphone access denied"**: Click the 🎤 button and allow microphone access
 - **"No speech detected"**: Speak clearly and try again
 - **"Network error"**: Check your internet connection
 - **Topic not recognized**: Try saying "arrays", "strings", "trees", etc. clearly

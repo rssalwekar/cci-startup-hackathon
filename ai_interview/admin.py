@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Problem, InterviewSession, ChatMessage, CodeSubmission, UserProblem
+from .models import Problem, InterviewSession, ChatMessage, CodeSubmission, UserProblem, InterviewRecording
 
 
 @admin.register(Problem)
@@ -40,3 +40,11 @@ class UserProblemAdmin(admin.ModelAdmin):
     list_filter = ['assigned_at', 'problem__difficulty']
     search_fields = ['user__username', 'problem__title']
     readonly_fields = ['assigned_at']
+
+
+@admin.register(InterviewRecording)
+class InterviewRecordingAdmin(admin.ModelAdmin):
+    list_display = ['session', 'recording_started_at', 'duration_seconds']
+    list_filter = ['recording_started_at']
+    search_fields = ['session__user__username']
+    readonly_fields = ['recording_started_at', 'recording_ended_at']
