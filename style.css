@@ -1,0 +1,144 @@
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(to bottom, #0a0f1f, #0f2027, #203a43);
+  color: white;
+  overflow-x: hidden;
+}
+
+/* Navbar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 3rem;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  background: rgba(10, 15, 31, 0.6);
+  backdrop-filter: blur(10px);
+  z-index: 10;
+}
+
+.logo {
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: #5bc0be;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 1.8rem;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: #cfd8dc;
+  transition: 0.3s;
+}
+
+.nav-links a:hover {
+  color: #5bc0be;
+}
+
+.apply-btn {
+  border: 1px solid #5bc0be;
+  color: #5bc0be;
+  background: transparent;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.apply-btn:hover {
+  background: #5bc0be;
+  color: black;
+}
+
+/* Hero Section */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 0 1.5rem;
+  padding-top: 6rem;
+}
+
+.hero h1 {
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
+
+.subtitle {
+  max-width: 700px;
+  color: #b0bec5;
+  font-size: 1.1rem;
+  line-height: 1.6rem;
+  margin-bottom: 2.5rem;
+}
+
+/* CTA Button */
+.cta-btn {
+  background: linear-gradient(to right, #00c9a7, #0079ff);
+  border: none;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 1rem 2.2rem;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 121, 255, 0.4);
+  transition: 0.3s ease;
+}
+
+.cta-btn:hover {
+  transform: scale(1.05);
+}
+
+/* Features */
+.features {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  color: #b0bec5;
+}
+
+/* Footer Tag */
+.footer-tag {
+  margin-top: 2.5rem;
+  border: 1px solid rgba(91, 192, 190, 0.5);
+  padding: 0.8rem 1.8rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  color: #cfd8dc;
+}
+
+.highlight {
+  color: #5bc0be;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero h1 {
+    font-size: 2.5rem;
+  }
+  .nav-links {
+    display: none;
+  }
+}
