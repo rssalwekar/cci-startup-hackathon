@@ -40,6 +40,14 @@ media/
 .env.test.local
 .env.production.local
 
+# SSL/TLS Certificates and Private Keys
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
 # IDE
 .vscode/
 .idea/
