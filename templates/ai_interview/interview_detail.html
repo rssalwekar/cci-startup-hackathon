@@ -1,59 +1,10 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interview Details - AI Coding Interview</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
+{% block title %}Interview Details - InterVue{% endblock %}
 
-        .navbar {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: white;
-        }
-
-        .navbar-brand {
-            font-size: 24px;
-            font-weight: bold;
-            color: #4fc3f7;
-        }
-
-        .navbar-menu {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .navbar-menu a {
-            color: white;
-            text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 5px;
-            transition: background 0.3s;
-        }
-
-        .navbar-menu a:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .container {
+{% block extra_styles %}
+        .detail-container {
             max-width: 1200px;
             margin: 30px auto;
             padding: 0 20px;
@@ -246,24 +197,15 @@
             color: #856404;
         }
 
+
         .badge-hard {
             background: #f8d7da;
             color: #721c24;
         }
-    </style>
-</head>
-<body>
-    <nav class="navbar">
-        <div class="navbar-brand">🤖 AI Interview</div>
-        <div class="navbar-menu">
-            <a href="{% url 'start_interview' %}">New Interview</a>
-            <a href="{% url 'interview_history' %}">History</a>
-            <a href="{% url 'profile' %}">Profile</a>
-            <a href="{% url 'logout' %}">Logout</a>
-        </div>
-    </nav>
+{% endblock %}
 
-    <div class="container">
+{% block content %}
+    <div class="detail-container">
         <a href="{% url 'interview_history' %}" class="back-link">
             ← Back to History
         </a>
@@ -409,5 +351,4 @@
             </div>
         {% endif %}
     </div>
-</body>
-</html>
+{% endblock %}

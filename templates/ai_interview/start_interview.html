@@ -1,27 +1,17 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Start AI Coding Interview</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{% extends 'base.html' %}
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+{% block title %}Start Interview - InterVue{% endblock %}
+
+{% block extra_styles %}
+        .start-container {
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
+            min-height: calc(100vh - 120px);
+            padding: 20px;
         }
 
-        .container {
+        .start-box {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 20px;
@@ -30,12 +20,6 @@
             width: 90%;
             text-align: center;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-
-        .logo {
-            font-size: 48px;
-            margin-bottom: 20px;
-            color: #4fc3f7;
         }
 
         h1 {
@@ -90,6 +74,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(79, 195, 247, 0.3);
+            margin: 0 10px;
         }
 
         .start-button:hover {
@@ -97,29 +82,39 @@
             box-shadow: 0 6px 20px rgba(79, 195, 247, 0.4);
         }
 
-        .user-info {
-            margin-top: 20px;
-            padding: 15px;
+        .back-button {
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            font-size: 14px;
-        }
-
-        .logout-link {
-            color: #4fc3f7;
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
             text-decoration: none;
-            margin-left: 10px;
+            display: inline-block;
+            margin: 0 10px;
         }
 
-        .logout-link:hover {
-            text-decoration: underline;
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
         }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="logo">🤖</div>
-        <h1>AI Coding Interview</h1>
+
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+{% endblock %}
+
+{% block content %}
+    <div class="start-container">
+        <div class="start-box">
+            <h1>InterVue</h1>
         
         <div class="description">
             Practice coding interviews with our AI interviewer. Get personalized problems, 
@@ -138,18 +133,17 @@
             </ul>
         </div>
 
-        <form method="post">
-            {% csrf_token %}
-            <button type="submit" class="start-button">
-                Start Interview
-            </button>
-        </form>
-
-        <div class="user-info">
-            Welcome, {{ user.username }}! 
-            <a href="{% url 'logout' %}" class="logout-link">Logout</a>
+        <div class="button-group">
+            <a href="{% url 'home' %}" class="back-button">
+                ← Back to Home
+            </a>
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="start-button">
+                    Start Interview →
+                </button>
+            </form>
+        </div>
         </div>
     </div>
-</body>
-</html>
-
+{% endblock %}

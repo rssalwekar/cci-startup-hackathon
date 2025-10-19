@@ -1,53 +1,9 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile - {{ user.get_full_name|default:user.username }}</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
+{% block title %}Profile - {{ user.get_full_name|default:user.username }}{% endblock %}
 
-        .navbar {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: white;
-        }
-
-        .navbar-brand {
-            font-size: 24px;
-            font-weight: bold;
-            color: #4fc3f7;
-        }
-
-        .navbar-menu {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .navbar-menu a {
-            color: white;
-            text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 5px;
-            transition: background 0.3s;
-        }
+{% block extra_styles %}
 
         .navbar-menu a:hover {
             background: rgba(255, 255, 255, 0.2);
@@ -267,19 +223,9 @@
             padding: 40px;
             color: #999;
         }
-    </style>
-</head>
-<body>
-    <nav class="navbar">
-        <div class="navbar-brand">🤖 AI Interview</div>
-        <div class="navbar-menu">
-            <a href="{% url 'start_interview' %}">New Interview</a>
-            <a href="{% url 'interview_history' %}">History</a>
-            <a href="{% url 'profile' %}" style="background: rgba(255, 255, 255, 0.2);">Profile</a>
-            <a href="{% url 'logout' %}">Logout</a>
-        </div>
-    </nav>
+{% endblock %}
 
+{% block content %}
     <div class="container">
         <div class="profile-header">
             <div class="avatar-section">
@@ -373,5 +319,4 @@
             {% endif %}
         </div>
     </div>
-</body>
-</html>
+{% endblock %}

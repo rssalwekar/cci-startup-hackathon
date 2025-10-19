@@ -1,27 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - AI Coding Interview</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{% extends 'base.html' %}
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+{% block title %}Login - InterVue{% endblock %}
+
+{% block extra_styles %}
+        .login-container {
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
+            min-height: calc(100vh - 120px);
         }
 
-        .container {
+        .login-box {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 20px;
@@ -29,13 +18,6 @@
             max-width: 400px;
             width: 90%;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-
-        .logo {
-            font-size: 48px;
-            text-align: center;
-            margin-bottom: 20px;
-            color: #4fc3f7;
         }
 
         h1 {
@@ -50,75 +32,73 @@
 
         label {
             display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 14px;
         }
 
-        input[type="text"], input[type="password"] {
+        input {
             width: 100%;
             padding: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
             background: rgba(255, 255, 255, 0.1);
             color: white;
-            font-size: 16px;
+            font-size: 14px;
         }
 
-        input[type="text"]:focus, input[type="password"]:focus {
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        input:focus {
             outline: none;
-            border-color: #4fc3f7;
-            box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.3);
-        }
-
-        input[type="text"]::placeholder, input[type="password"]::placeholder {
-            color: rgba(255, 255, 255, 0.6);
+            border-color: rgba(255, 255, 255, 0.5);
         }
 
         .login-button {
             width: 100%;
-            background: linear-gradient(45deg, #4fc3f7, #29b6f6);
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 15px;
-            font-size: 16px;
             border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 20px;
+            transition: transform 0.2s;
         }
 
         .login-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(79, 195, 247, 0.3);
-        }
-
-        .demo-credentials {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 14px;
-            text-align: center;
-        }
-
-        .demo-credentials strong {
-            color: #4fc3f7;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
         .error-message {
-            background: rgba(244, 67, 54, 0.2);
-            border: 1px solid #f44336;
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid rgba(255, 107, 107, 0.5);
             color: #ffcdd2;
             padding: 10px;
             border-radius: 8px;
             margin-bottom: 20px;
             text-align: center;
         }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="logo">🤖</div>
-        <h1>AI Coding Interview</h1>
+
+        .signup-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .signup-link a {
+            color: white;
+            text-decoration: underline;
+        }
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-box">
+        <h1>Login to InterVue</h1>
         
         {% if form.errors %}
             <div class="error-message">
@@ -141,16 +121,9 @@
             <button type="submit" class="login-button">Login</button>
         </form>
 
-        <div class="demo-credentials">
-            <strong>Demo Credentials:</strong><br>
-            Username: demo<br>
-            Password: demo123
-        </div>
-
-        <div class="signup-link" style="text-align: center; margin-top: 20px; font-size: 14px;">
-            Don't have an account? <a href="{% url 'signup' %}" style="color: #4fc3f7; text-decoration: none; font-weight: 600;">Sign up here</a>
+        <div class="signup-link">
+            Don't have an account? <a href="{% url 'signup' %}">Sign up here</a>
         </div>
     </div>
-</body>
-</html>
-
+</div>
+{% endblock %}
