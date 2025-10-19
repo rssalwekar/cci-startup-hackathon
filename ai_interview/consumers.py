@@ -143,6 +143,11 @@ class InterviewConsumer(AsyncWebsocketConsumer):
     async def process_with_ai(self, user_message):
         """Process user message with AI agent."""
         try:
+            # Check if user wants to change problems
+            if await self.check_for_problem_change_request(user_message):
+                await self.handle_problem_change_request(user_message)
+                return
+            
             # Check if we need to select a problem
             if self.session.status == 'preparing' and not self.session.problem:
                 # Try to extract preferences from user message
@@ -246,6 +251,69 @@ class InterviewConsumer(AsyncWebsocketConsumer):
             print("AI Agent: No topics found")
         
         await self.update_session()
+
+    async def check_for_problem_change_request(self, user_message):
+        """Check if user wants to change problems."""
+        user_message_lower = user_message.lower()
+        
+        # Keywords that indicate user wants to change problems
+        change_keywords = [
+            'change problem',
+            'new problem',
+            'different problem',
+            'switch problem',
+            'another problem',
+            'try a different',
+            'can we do',
+            'let\'s do',
+            'i want to do',
+            'i\'d like to do',
+            'can i try',
+            'give me a different',
+            'pick a different',
+            'choose a different'
+        ]
+        
+        # Check if any change keywords are present
+        for keyword in change_keywords:
+            if keyword in user_message_lower:
+                return True
+        
+        return False
+
+    async def handle_problem_change_request(self, user_message):
+        """Handle user's request to change problems."""
+        print(f"AI Agent: User wants to change problem: '{user_message}'")
+        
+        # Extract new preferences from the message
+        await self.extract_preferences(user_message)
+        
+        # Check if we have new preferences
+        has_difficulty = bool(self.session.difficulty_preference)
+        has_topics = bool(self.session.topic_preferences)
+        
+        if has_difficulty or has_topics:
+            # Select a new problem with the updated preferences
+            problem = await self.select_problem_async()
+            if problem:
+                # Update the session with the new problem
+                await self.update_session_problem(problem)
+                
+                # Send confirmation and present the new problem
+                await self.send_ai_message(f"Sure! I've selected a new {problem.difficulty} problem for you. Let's work on this instead.")
+                
+                # Send a special message to update the problem window
+                await self.send_problem_update(problem)
+            else:
+                await self.send_ai_message("I'm sorry, I couldn't find a suitable problem with those preferences. Let me try with different criteria.")
+        else:
+            # Ask for specific preferences
+            await self.send_ai_message("I'd be happy to give you a different problem! What difficulty level (easy, medium, or hard) and topic would you like to work on?")
+
+    async def send_problem_update(self, problem):
+        """Send a special message to update the problem window."""
+        # Send a system message that the frontend can detect to update the problem window
+        await self.send_ai_message(f"PROBLEM_UPDATE:{problem.id}")
 
     async def send_ai_message(self, message):
         """Send a message from the AI."""

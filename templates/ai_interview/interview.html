@@ -767,7 +767,18 @@
             switch (data.type) {
                 case 'chat_message':
                     console.log('Adding message:', data.sender, data.message);
+                    
+                    // Check if this is a special problem update message
+                    if (data.sender === 'ai' && data.message.startsWith('PROBLEM_UPDATE:')) {
+                        // Extract problem ID and update the problem window
+                        const problemId = data.message.split(':')[1];
+                        console.log('Problem update requested for ID:', problemId);
+                        updateProblemWindow();
+                        return; // Don't add this message to chat
+                    }
+                    
                     addMessage(data.sender, data.message);
+                    
                     // Check if this is a problem presentation message
                     if (data.sender === 'ai' && data.message.includes('**') && data.message.includes('**')) {
                         // Extract problem data from the message (this is a simple approach)
@@ -1206,6 +1217,77 @@
                 // Re-add resize handle after content update
                 makeResizable();
             }
+        }
+
+        function updateProblemWindow() {
+            // Fetch the latest session data to get the new problem
+            fetch(`/ai-interview/api/session-data/{{ session.id }}/`)
+                .then(response => response.json())
+                .then(sessionData => {
+                    if (sessionData.session.problem) {
+                        console.log('Updating problem window with new problem:', sessionData.session.problem);
+                        updateProblemContent(sessionData.session.problem);
+                        
+                        // Clear the code editor
+                        if (window.monacoEditor) {
+                            window.monacoEditor.setValue('');
+                        }
+                        
+                        // Clear the output
+                        const outputDiv = document.getElementById('output');
+                        if (outputDiv) {
+                            outputDiv.innerHTML = '';
+                        }
+                        
+                        // Show a brief notification
+                        const problemSection = document.querySelector('.problem-section');
+                        if (problemSection) {
+                            const notification = document.createElement('div');
+                            notification.className = 'problem-update-notification';
+                            notification.textContent = 'Problem updated!';
+                            notification.style.cssText = `
+                                position: absolute;
+                                top: 10px;
+                                right: 10px;
+                                background: #4CAF50;
+                                color: white;
+                                padding: 8px 16px;
+                                border-radius: 4px;
+                                font-size: 14px;
+                                z-index: 1000;
+                                animation: fadeInOut 2s ease-in-out;
+                            `;
+                            
+                            // Add CSS animation
+                            if (!document.getElementById('problem-update-animation')) {
+                                const style = document.createElement('style');
+                                style.id = 'problem-update-animation';
+                                style.textContent = `
+                                    @keyframes fadeInOut {
+                                        0% { opacity: 0; transform: translateY(-10px); }
+                                        20% { opacity: 1; transform: translateY(0); }
+                                        80% { opacity: 1; transform: translateY(0); }
+                                        100% { opacity: 0; transform: translateY(-10px); }
+                                    }
+                                `;
+                                document.head.appendChild(style);
+                            }
+                            
+                            problemSection.style.position = 'relative';
+                            problemSection.appendChild(notification);
+                            
+                            // Remove notification after animation
+                            setTimeout(() => {
+                                if (notification.parentNode) {
+                                    notification.parentNode.removeChild(notification);
+                                }
+                            }, 2000);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching updated session data:', error);
+                });
         }
 
         // Event listeners

@@ -25,19 +25,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', "django-insecure-qk%9y7uv_a!e+5b#8^b@2jjlzi9beh&v=3*s#a$av0jbmxlc27")
+SECRET_KEY = "django-insecure-qk%9y7uv_a!e+5b#8^b@2jjlzi9beh&v=3*s#a$av0jbmxlc27"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
+DEBUG = True
 
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    '*.railway.app',
-    '*.render.com',
-    '*.vercel.app',
-    '*.herokuapp.com',
-]
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -147,23 +140,8 @@ CHANNEL_LAYERS = {
     },
 }
 
-# API Keys
+# Kronos Labs API Key
 KRONOS_API_KEY = os.getenv('KRONOS_API_KEY')
-ELEVEN_LABS_API_KEY = os.getenv('ELEVEN_LABS_API_KEY')
-
-# Production settings
-if not DEBUG:
-    # Security settings for production
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = 'DENY'
-    
-    # Static files for production
-    STATIC_ROOT = BASE_DIR / 'staticfiles'
-    
-    # Add whitenoise for static files
-    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Static files configuration
 STATICFILES_DIRS = [
