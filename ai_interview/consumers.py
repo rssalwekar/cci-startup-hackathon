@@ -30,9 +30,14 @@ class InterviewConsumer(AsyncWebsocketConsumer):
         await self.accept()
         
         # Send initial greeting if this is a new session
+        print(f"WebSocket connected for session {self.session_id}, status: {self.session.status}")
         if self.session.status == 'preparing':
+            print("Sending initial greeting...")
             greeting = self.ai_agent.get_initial_greeting()
             await self.send_ai_message(greeting)
+            print("Initial greeting sent!")
+        else:
+            print(f"Session status is {self.session.status}, not sending greeting")
 
     async def disconnect(self, close_code):
         # Leave session group
@@ -132,7 +137,8 @@ class InterviewConsumer(AsyncWebsocketConsumer):
     async def handle_end_interview(self, data):
         """Handle end interview request."""
         # Update session status
-        await self.update_session('completed')
+        self.session.status = 'completed'
+        await self.update_session()
         
         # Send final message
         await self.send_ai_message("Thank you for the interview! Your session has been completed. Redirecting you to your profile where you can review your interview...")
@@ -184,11 +190,71 @@ class InterviewConsumer(AsyncWebsocketConsumer):
             await self.send_error(f"Error processing with AI: {str(e)}")
 
     async def extract_preferences(self, user_message):
-        """Extract difficulty and topic preferences from user message."""
+        """Extract difficulty, topic preferences, and problem name requests from user message."""
         # Simple keyword matching for now - could be enhanced with NLP
         user_message_lower = user_message.lower()
         
         print(f"AI Agent: Extracting preferences from: '{user_message}'")
+        
+        # Check for specific problem name requests first
+        problem_name = None
+        problem_request_keywords = [
+            'i want to do',
+            'i want',
+            'can i do',
+            'let me do',
+            'give me',
+            'i would like',
+            'i would like to do',
+            'can we do',
+            'let\'s do',
+            'let us do'
+        ]
+        
+        for keyword in problem_request_keywords:
+            if keyword in user_message_lower:
+                # Extract the text after the keyword
+                parts = user_message_lower.split(keyword, 1)
+                if len(parts) > 1:
+                    potential_problem = parts[1].strip()
+                    # Remove common words that might follow
+                    potential_problem = potential_problem.replace('problem', '').replace('the', '').strip()
+                    if potential_problem and len(potential_problem) > 2:
+                        problem_name = potential_problem
+                        print(f"AI Agent: Found potential problem name request: '{problem_name}'")
+                        break
+        
+        # If no keyword-based extraction worked, check if the message looks like a problem name
+        if not problem_name:
+            import re
+            
+            # First, check if the entire message is a simple problem name (like "two sum")
+            # This handles cases where someone just says the problem name directly
+            message_clean = user_message.strip().lower()
+            
+            # Check if it's a simple problem name (2-4 words, no special characters except spaces)
+            if (re.match(r'^[a-z]+(?:\s+[a-z]+){0,3}$', message_clean) and 
+                len(message_clean.split()) <= 4 and 
+                len(message_clean) > 3 and
+                not any(word in message_clean for word in ['easy', 'medium', 'hard', 'array', 'string', 'tree', 'graph', 'dp', 'dynamic', 'programming'])):
+                problem_name = user_message.strip()
+                print(f"AI Agent: Detected direct problem name: '{problem_name}'")
+            
+            # If still no match, look for capitalized words that might be problem names
+            if not problem_name:
+                capitalized_words = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', user_message)
+                if capitalized_words:
+                    # Filter out common words that aren't problem names
+                    common_words = {'Easy', 'Medium', 'Hard', 'Array', 'String', 'Tree', 'Graph', 'The', 'A', 'An', 'And', 'Or', 'But', 'In', 'On', 'At', 'To', 'For', 'Of', 'With', 'By'}
+                    potential_problems = [word for word in capitalized_words if word not in common_words]
+                    if potential_problems:
+                        problem_name = ' '.join(potential_problems)
+                        print(f"AI Agent: Found potential problem name from capitalized words: '{problem_name}'")
+        
+        # Store the problem name request if found
+        if problem_name:
+            self.session.problem_name_request = problem_name
+            print(f"AI Agent: Storing problem name request: '{problem_name}'")
         
         # Extract difficulty preference
         if 'easy' in user_message_lower:

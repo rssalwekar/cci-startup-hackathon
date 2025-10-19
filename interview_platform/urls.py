@@ -19,6 +19,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from django.shortcuts import redirect
+from django.conf import settings
+from django.conf.urls.static import static
 from ai_interview import auth_views as custom_auth_views
 from ai_interview import views as interview_views
 
@@ -44,3 +46,7 @@ urlpatterns = [
     path("history/<int:session_id>/", custom_auth_views.interview_detail, name='interview_detail'),
     path("history/<int:session_id>/delete/", custom_auth_views.delete_interview, name='delete_interview'),
 ]
+
+# Serve media files during development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

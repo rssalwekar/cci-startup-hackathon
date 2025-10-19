@@ -385,16 +385,7 @@
             cursor: not-allowed;
         }
         
-        .voice-button.continuous {
-            background-color: #9C27B0;
-            color: white;
-        }
-        
-        .voice-button.continuous:hover {
-            background-color: #7B1FA2;
-        }
-        
-        .voice-button.continuous.active {
+        .voice-button.mic.active {
             background-color: #4CAF50;
             animation: pulse 1.5s infinite;
         }
@@ -506,6 +497,24 @@
         .ide-controls button.end-interview:hover {
             background-color: #c82333;
         }
+        
+        .ide-controls button.recording-button {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .ide-controls button.recording-button:hover {
+            background-color: #218838;
+        }
+        
+        .ide-controls button.recording-button.recording {
+            background-color: #dc3545;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .ide-controls button.recording-button.recording:hover {
+            background-color: #c82333;
+        }
 
 
         .output-title {
@@ -600,11 +609,8 @@
             <div class="chat-input">
                 <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off">
                 <div class="voice-controls">
-                    <button class="voice-button mic" id="micButton" onclick="toggleRecording()" title="Click to speak">
+                    <button class="voice-button mic" id="micButton" onclick="toggleVoiceInput()" title="Click to start/stop voice input">
                         🎤
-                    </button>
-                    <button class="voice-button continuous" id="continuousButton" onclick="toggleContinuousListening()" title="Toggle Continuous Listening (Auto-detect speech)">
-                        🎯
                     </button>
                     <button class="voice-button speaker" id="speakerButton" onclick="toggleSpeaking()" title="Click to hear AI response">
                         🔊
@@ -631,6 +637,7 @@
                     <button onclick="submitCode()">Submit</button>
                     <button onclick="requestHint()">Hint</button>
                     <button onclick="requestCodeHelp()">Get Help</button>
+                    <button onclick="toggleRecording()" class="recording-button" id="recordingButton">🎥 Start Recording</button>
                     <button onclick="endInterview()" class="end-interview">End Interview</button>
                 </div>
             </div>
@@ -662,6 +669,10 @@
       theme: 'vs-dark',
       automaticLayout: true
     });
+    
+    // Make editor globally accessible
+    window.monacoEditor = editor;
+    console.log('Monaco editor initialized and made globally accessible');
   });
   
   async function runCode() {
@@ -723,11 +734,12 @@
         const maxReconnectAttempts = 5;
 
         function connectWebSocket() {
+            console.log('Attempting to connect to WebSocket:', websocketUrl);
             try {
                 socket = new WebSocket(websocketUrl);
                 
                 socket.onopen = function(event) {
-                    console.log('WebSocket connected');
+                    console.log('WebSocket connected to:', websocketUrl);
                     document.getElementById('connectionStatus').textContent = 'Connected';
                     document.getElementById('connectionStatus').className = 'success';
                     reconnectAttempts = 0;
@@ -790,6 +802,10 @@
                                 .then(sessionData => {
                                     if (sessionData.session.problem) {
                                         updateProblemContent(sessionData.session.problem);
+                                        // Generate function signature for initial problem
+                                        setTimeout(() => {
+                                            generateFunctionSignature(sessionData.session.problem);
+                                        }, 100); // Small delay to ensure Monaco editor is ready
                                     }
                                 })
                                 .catch(error => console.error('Error fetching session data:', error));
@@ -913,24 +929,167 @@
                 const response = await fetch(`/ai-interview/get-test-cases/{{ session.id }}/`);
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('Received test cases:', data.test_cases);
                     return data.test_cases || [];
+                } else {
+                    console.error('Failed to fetch test cases:', response.statusText);
                 }
             } catch (error) {
                 console.log('Could not fetch test cases from server:', error);
             }
             
-            // Fallback to sample test cases for Two Sum problem
-            return [
-                { input: "nums = [2,7,11,15]\ntarget = 9", expected: "[0,1]" },
-                { input: "nums = [3,2,4]\ntarget = 6", expected: "[1,2]" },
-                { input: "nums = [3,3]\ntarget = 6", expected: "[0,1]" }
-            ];
+            // Fallback to empty array if no test cases found
+            console.log('No test cases found, returning empty array');
+            return [];
+        }
+        
+        function extractFunctionArgs(input) {
+            // Extract function arguments from test case input
+            // This is a more robust implementation that handles various problem types
+            
+            // Handle multiple parameter cases
+            if (input.includes('nums =') && input.includes('target =')) {
+                return 'nums, target';
+            } else if (input.includes('a =') && input.includes('b =')) {
+                return 'a, b';
+            } else if (input.includes('s =') && input.includes('t =')) {
+                return 's, t';
+            } else if (input.includes('p =') && input.includes('q =')) {
+                return 'p, q';
+            } else if (input.includes('left =') && input.includes('right =')) {
+                return 'left, right';
+            }
+            
+            // Handle single parameter cases
+            else if (input.includes('columnNumber =')) {
+                return 'columnNumber';
+            } else if (input.includes('digits =')) {
+                return 'digits';
+            } else if (input.includes('strs =')) {
+                return 'strs';
+            } else if (input.includes('root =')) {
+                return 'root';
+            } else if (input.includes('s =')) {
+                return 's';
+            } else if (input.includes('word =')) {
+                return 'word';
+            } else if (input.includes('string =')) {
+                return 'string';
+            } else if (input.includes('head =')) {
+                return 'head';
+            } else if (input.includes('node =')) {
+                return 'node';
+            } else if (input.includes('val =')) {
+                return 'val';
+            } else if (input.includes('n =')) {
+                return 'n';
+            } else if (input.includes('x =')) {
+                return 'x';
+            }
+            
+            // Handle direct values (numbers, strings, arrays)
+            else if (/^\d+$/.test(input.trim())) {
+                // If input is just a number, use it directly
+                return input.trim();
+            } else if (/^".*"$/.test(input.trim())) {
+                // If input is a quoted string, use it directly
+                return input.trim();
+            } else if (/^\[.*\]$/.test(input.trim())) {
+                // If input is an array, use it directly
+                return input.trim();
+            } else if (/^(true|false)$/i.test(input.trim())) {
+                // If input is a boolean, use it directly
+                return input.trim();
+            }
+            
+            // Fallback: try to extract parameter names from the input
+            else {
+                // Look for common patterns like "param = value"
+                const paramMatch = input.match(/(\w+)\s*=/);
+                if (paramMatch) {
+                    return paramMatch[1];
+                }
+                
+                // If no pattern matches, return empty string
+                return '';
+            }
         }
 
         async function runTestCase(code, testCase, testNumber) {
             try {
-                // Prepare the test code
-                const testCode = `${code}\n\n# Test case ${testNumber}\n${testCase.input}\nprint("Expected:", ${testCase.expected})`;
+                // Get the current problem from the problem window
+                const problemTitle = document.querySelector('.problem-title')?.textContent || '';
+                
+                // Prepare the test code based on the problem type
+                let testCode = code;
+                
+                // Check if code uses LeetCode Solution class format
+                const hasSolutionClass = code.includes('class Solution') || code.includes('class solution');
+                
+                if (hasSolutionClass) {
+                    // Handle LeetCode Solution class format - this is the most common case
+                    const methodMatch = code.match(/def\s+(\w+)\s*\(/);
+                    if (methodMatch) {
+                        const methodName = methodMatch[1];
+                        const args = extractFunctionArgs(testCase.input);
+                        
+                        // Convert null to None for Python compatibility
+                        let processedInput = testCase.input.replace(/null/g, 'None');
+                        
+                        // Parse the input to create proper Python variable assignments
+                        const inputLines = processedInput.split(',').map(line => line.trim());
+                        const variableAssignments = inputLines.map(line => {
+                            if (line.includes('=')) {
+                                return line;
+                            }
+                            return line;
+                        }).join('\n');
+                        
+                        testCode += `\n\n# Test case ${testNumber}\n${variableAssignments}\nsolution = Solution()\nresult = solution.${methodName}(${args})\nprint("Result:", result)\nprint("Expected:", ${JSON.stringify(testCase.expected)})`;
+                    } else {
+                        let processedInput = testCase.input.replace(/null/g, 'None');
+                        const inputLines = processedInput.split(',').map(line => line.trim());
+                        const variableAssignments = inputLines.map(line => {
+                            if (line.includes('=')) {
+                                return line;
+                            }
+                            return line;
+                        }).join('\n');
+                        testCode += `\n\n# Test case ${testNumber}\n${variableAssignments}\nsolution = Solution()\nprint("Expected:", ${JSON.stringify(testCase.expected)})`;
+                    }
+                } else {
+                    // Handle standalone function format
+                    const functionMatch = code.match(/def\s+(\w+)\s*\(/);
+                    if (functionMatch) {
+                        const functionName = functionMatch[1];
+                        const args = extractFunctionArgs(testCase.input);
+                        
+                        // Convert null to None for Python compatibility
+                        let processedInput = testCase.input.replace(/null/g, 'None');
+                        
+                        // Parse the input to create proper Python variable assignments
+                        const inputLines = processedInput.split(',').map(line => line.trim());
+                        const variableAssignments = inputLines.map(line => {
+                            if (line.includes('=')) {
+                                return line;
+                            }
+                            return line;
+                        }).join('\n');
+                        
+                        testCode += `\n\n# Test case ${testNumber}\n${variableAssignments}\nresult = ${functionName}(${args})\nprint("Result:", result)\nprint("Expected:", ${JSON.stringify(testCase.expected)})`;
+                    } else {
+                        // Fallback: just print the input and expected output
+                        let processedInput = testCase.input.replace(/null/g, 'None');
+                        const inputLines = processedInput.split(',').map(line => line.trim());
+                        const variableAssignments = inputLines.map(line => {
+                            if (line.includes('=')) {
+                                return line;
+                            }
+                            return line;
+                        }).join('\n');
+                        testCode += `\n\n# Test case ${testNumber}\n${variableAssignments}\nprint("Expected:", ${JSON.stringify(testCase.expected)})`;
+                    }
+                }
                 
                 const res = await fetch("https://emkc.org/api/v2/piston/execute", {
                     method: "POST",
@@ -948,8 +1107,21 @@
                     const output = data.run.stdout.trim();
                     const expected = testCase.expected;
                     
-                    // Simple comparison - in a real implementation, you'd parse the output properly
-                    const passed = output.includes(expected) || output === expected;
+                    // Better comparison logic
+                    let passed = false;
+                    if (output.includes("Result:")) {
+                        const resultLine = output.split('\n').find(line => line.includes("Result:"));
+                        if (resultLine) {
+                            const actualResult = resultLine.split("Result:")[1].trim();
+                            // Compare actual result with expected
+                            passed = actualResult === expected || 
+                                    actualResult === expected.replace(/"/g, '') ||
+                                    actualResult.toLowerCase() === expected.toLowerCase();
+                        }
+                    } else {
+                        // Fallback to simple comparison
+                        passed = output.includes(expected) || output === expected;
+                    }
                     
                     return {
                         testNumber,
@@ -1025,8 +1197,23 @@
             }
         }
 
-        function endInterview() {
+        async function endInterview() {
             if (confirm('Are you sure you want to end the interview? This action cannot be undone.')) {
+                // Stop recording if it's active
+                if (isInterviewRecording) {
+                    try {
+                        await stopVideoRecording();
+                        await fetch(`/ai-interview/api/stop-recording/{{ session.id }}/`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': getCookie('csrftoken')
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Error stopping recording:', error);
+                    }
+                }
+                
                 // Send end interview message to AI
                 if (socket && socket.readyState === WebSocket.OPEN) {
                     socket.send(JSON.stringify({
@@ -1034,8 +1221,20 @@
                     }));
                 }
                 
-                // Redirect to profile page to see the completed interview
-                window.location.href = '/profile/';
+                // Redirect immediately to results page for better UX
+                // AI feedback will be generated in the background
+                window.location.href = '/ai-interview/results/{{ session.id }}/';
+                
+                // Trigger feedback generation in background (non-blocking)
+                fetch(`/ai-interview/complete/{{ session.id }}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json'
+                    }
+                }).catch(error => {
+                    console.error('Error generating feedback:', error);
+                });
             }
         }
 
@@ -1218,6 +1417,62 @@
                 makeResizable();
             }
         }
+        
+        async function generateFunctionSignature(problemData) {
+            if (!problemData || !problemData.title) {
+                console.log('No problem data or title available for function signature generation');
+                return;
+            }
+            
+            console.log('Generating function signature for problem:', problemData.title);
+            
+            try {
+                // Fetch the dynamic function signature from the server
+                const response = await fetch(`/ai-interview/get-function-signature/{{ session.id }}/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const signature = data.function_signature;
+                    
+                    console.log('Received function signature:', signature);
+                    
+                    if (signature) {
+                        // Function to set the signature with retry logic
+                        const setSignature = (retryCount = 0) => {
+                            if (window.monacoEditor && typeof window.monacoEditor.setValue === 'function') {
+                                window.monacoEditor.setValue(signature);
+                                console.log('Function signature set in Monaco editor');
+                                return true;
+                            } else if (window.monacoEditor && typeof window.monacoEditor.getModel === 'function') {
+                                // Try alternative method
+                                const model = window.monacoEditor.getModel();
+                                if (model) {
+                                    model.setValue(signature);
+                                    console.log('Function signature set via model');
+                                    return true;
+                                }
+                            }
+                            
+                            // If not successful and we haven't exceeded retries, try again
+                            if (retryCount < 3) {
+                                console.log(`Monaco editor not ready, retrying in ${(retryCount + 1) * 200}ms... (attempt ${retryCount + 1}/3)`);
+                                setTimeout(() => setSignature(retryCount + 1), (retryCount + 1) * 200);
+                            } else {
+                                console.log('Monaco editor still not available after 3 retries');
+                            }
+                            return false;
+                        };
+                        
+                        setSignature();
+                    } else {
+                        console.log('No function signature received from server');
+                    }
+                } else {
+                    console.error('Failed to fetch function signature:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error fetching function signature:', error);
+            }
+        }
 
         function updateProblemWindow() {
             // Fetch the latest session data to get the new problem
@@ -1228,10 +1483,13 @@
                         console.log('Updating problem window with new problem:', sessionData.session.problem);
                         updateProblemContent(sessionData.session.problem);
                         
-                        // Clear the code editor
-                        if (window.monacoEditor) {
+                        // Clear the code editor first
+                        if (window.monacoEditor && typeof window.monacoEditor.setValue === 'function') {
                             window.monacoEditor.setValue('');
                         }
+                        
+                        // Generate and set function signature in IDE
+                        generateFunctionSignature(sessionData.session.problem);
                         
                         // Clear the output
                         const outputDiv = document.getElementById('output');
@@ -1434,26 +1692,30 @@
             return true;
         }
 
-        function toggleRecording() {
+        function toggleVoiceInput() {
+            console.log('toggleVoiceInput called, current state:', continuousListening);
+            
+            // Visual feedback that button was clicked
+            const button = document.getElementById('micButton');
+            button.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                button.style.transform = 'scale(1)';
+            }, 100);
+            
             if (!recognition) {
+                console.log('No recognition object, initializing...');
                 if (!initSpeechRecognition()) {
+                    console.log('Failed to initialize speech recognition');
                     return;
                 }
             }
 
-            if (isRecording) {
-                stopRecording();
+            if (continuousListening) {
+                console.log('Stopping voice input');
+                stopContinuousListening();
             } else {
-                startRecording();
-            }
-        }
-
-        function startRecording() {
-            try {
-                recognition.start();
-            } catch (error) {
-                console.error('Error starting speech recognition:', error);
-                document.getElementById('voiceStatus').textContent = 'Error starting recording';
+                console.log('Starting voice input');
+                startContinuousListening();
             }
         }
 
@@ -1467,25 +1729,7 @@
             }
         }
 
-        // Continuous listening functions
-        function toggleContinuousListening() {
-            console.log('toggleContinuousListening called, current state:', continuousListening);
-            
-            // Visual feedback that button was clicked
-            const button = document.getElementById('continuousButton');
-            button.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                button.style.transform = 'scale(1)';
-            }, 100);
-            
-            if (continuousListening) {
-                console.log('Stopping continuous listening');
-                stopContinuousListening();
-            } else {
-                console.log('Starting continuous listening');
-                startContinuousListening();
-            }
-        }
+        // Voice input functions
 
         function startContinuousListening() {
             console.log('startContinuousListening called');
@@ -1501,8 +1745,8 @@
 
             console.log('Setting continuous listening to true');
             continuousListening = true;
-            document.getElementById('continuousButton').classList.add('active');
-            document.getElementById('continuousButton').textContent = '🎯';
+            document.getElementById('micButton').classList.add('active');
+            document.getElementById('micButton').textContent = '🎤';
             document.getElementById('voiceStatus').textContent = '🎤 Starting microphone...';
             document.getElementById('voiceStatus').style.color = '#4CAF50';
             
@@ -1517,7 +1761,7 @@
                     document.getElementById('voiceStatus').textContent = 'Microphone access required - please allow and try again';
                     document.getElementById('voiceStatus').style.color = '#f44336';
                     continuousListening = false;
-                    document.getElementById('continuousButton').classList.remove('active');
+                    document.getElementById('micButton').classList.remove('active');
                 }
             } else {
                 console.log('Already recording, skipping start');
@@ -1526,8 +1770,8 @@
 
         function stopContinuousListening() {
             continuousListening = false;
-            document.getElementById('continuousButton').classList.remove('active');
-            document.getElementById('continuousButton').textContent = '🎯';
+            document.getElementById('micButton').classList.remove('active');
+            document.getElementById('micButton').textContent = '🎤';
             document.getElementById('voiceStatus').textContent = '';
             document.getElementById('voiceStatus').style.color = '';
             
@@ -1564,6 +1808,13 @@
                         voice_id: '21m00Tcm4TlvDq8ikWAM'  // Natural-sounding voice
                     })
                 });
+
+                if (!response.ok) {
+                    // ElevenLabs API error (quota exceeded, etc.) - use fallback
+                    console.log('ElevenLabs API error, using browser speech synthesis');
+                    fallbackSpeechSynthesis(text);
+                    return;
+                }
 
                 const data = await response.json();
 
@@ -1754,8 +2005,192 @@
         
         updateCharacterCounter();
         
-        // Don't start continuous listening automatically - requires user interaction
-        // User needs to click the continuous button to enable microphone access
+        // Don't start voice input automatically - requires user interaction
+        // User needs to click the mic button to enable microphone access
+        
+        // Interview recording functionality
+        let isInterviewRecording = false;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let recordingStream = null;
+        
+        async function toggleRecording() {
+            const button = document.getElementById('recordingButton');
+            
+            if (isInterviewRecording) {
+                // Stop recording
+                await stopVideoRecording();
+                
+                try {
+                    const response = await fetch(`/ai-interview/api/stop-recording/{{ session.id }}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken')
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        isInterviewRecording = false;
+                        button.textContent = '🎥 Start Recording';
+                        button.classList.remove('recording');
+                        console.log('Recording stopped. Duration:', data.duration_seconds, 'seconds');
+                    } else {
+                        console.error('Failed to stop recording:', data.error);
+                    }
+                } catch (error) {
+                    console.error('Error stopping recording:', error);
+                }
+            } else {
+                // Start recording
+                const started = await startVideoRecording();
+                if (started) {
+                    try {
+                        const response = await fetch(`/ai-interview/api/start-recording/{{ session.id }}/`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': getCookie('csrftoken')
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            isInterviewRecording = true;
+                            button.textContent = '⏹️ Stop Recording';
+                            button.classList.add('recording');
+                            console.log('Recording started. ID:', data.recording_id);
+                        } else {
+                            console.error('Failed to start recording:', data.error);
+                        }
+                    } catch (error) {
+                        console.error('Error starting recording:', error);
+                    }
+                }
+            }
+        }
+        
+        // Video recording functions
+        async function startVideoRecording() {
+            try {
+                // Request screen capture with audio
+                recordingStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        mediaSource: 'screen',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 44100
+                    }
+                });
+                
+                // Set up MediaRecorder
+                const options = {
+                    mimeType: 'video/webm;codecs=vp9,opus',
+                    videoBitsPerSecond: 2500000, // 2.5 Mbps
+                    audioBitsPerSecond: 128000   // 128 kbps
+                };
+                
+                // Fallback to different codec if vp9 not supported
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    options.mimeType = 'video/webm;codecs=vp8,opus';
+                }
+                
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    options.mimeType = 'video/webm';
+                }
+                
+                mediaRecorder = new MediaRecorder(recordingStream, options);
+                recordedChunks = [];
+                
+                mediaRecorder.ondataavailable = function(event) {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = function() {
+                    console.log('MediaRecorder stopped, chunks:', recordedChunks.length);
+                };
+                
+                mediaRecorder.onerror = function(event) {
+                    console.error('MediaRecorder error:', event.error);
+                };
+                
+                // Start recording
+                mediaRecorder.start(1000); // Collect data every second
+                console.log('Video recording started');
+                
+                // Handle stream end (user stops sharing screen)
+                recordingStream.getVideoTracks()[0].onended = function() {
+                    console.log('Screen sharing ended by user');
+                    if (isInterviewRecording) {
+                        toggleRecording(); // Stop recording
+                    }
+                };
+                
+                return true;
+                
+            } catch (error) {
+                console.error('Error starting video recording:', error);
+                alert('Failed to start screen recording. Please ensure you grant permission to share your screen.');
+                return false;
+            }
+        }
+        
+        async function stopVideoRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                console.log('Video recording stopped');
+            }
+            
+            if (recordingStream) {
+                recordingStream.getTracks().forEach(track => track.stop());
+                recordingStream = null;
+            }
+            
+            // Store the recorded video for later upload
+            if (recordedChunks.length > 0) {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                window.recordedVideoBlob = blob;
+                console.log('Video blob created, size:', blob.size, 'bytes');
+                
+                // Upload the video to the server
+                await uploadVideoToServer(blob);
+            }
+        }
+        
+        async function uploadVideoToServer(videoBlob) {
+            try {
+                const formData = new FormData();
+                formData.append('video', videoBlob, `interview_${Date.now()}.webm`);
+                formData.append('session_id', '{{ session.id }}');
+                
+                const response = await fetch('/ai-interview/api/upload-video/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('Video uploaded successfully:', data.video_url);
+                } else {
+                    console.error('Failed to upload video:', data.error);
+                }
+                
+            } catch (error) {
+                console.error('Error uploading video:', error);
+            }
+        }
     </script>
 </body>
 </html>
