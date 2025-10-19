@@ -21,26 +21,51 @@ An intelligent platform that simulates real technical interviews using AI. Pract
 ## Installation
 
 ### 1. Clone Repository
+
+```bash
 git clone https://github.com/rssalwekar/cci-startup-hackathon.git
 cd cci-startup-hackathon
+```
 
 ### 2. Create Virtual Environment
-Windows: python -m venv .venv then .venv\Scripts\activate
-Mac/Linux: python3 -m venv .venv then source .venv/bin/activate
+
+**Windows:**
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+**Mac/Linux:**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
 ### 3. Install Dependencies
+
+```bash
 pip install -r requirements.txt
+```
 
 ### 4. Configure Environment Variables
-Create a .env file with:
+
+Create a `.env` file in the root directory with:
+
+```env
 KRONOS_API_KEY=your_kronos_api_key_here
 ELEVEN_LABS_API_KEY=your_elevenlabs_api_key_here
+```
 
-Get API Keys from: Kronos Labs (kronosai.com), ElevenLabs (elevenlabs.io)
+**Get API Keys from:**
+- Kronos Labs: https://kronoslabs.org/
+- ElevenLabs: https://elevenlabs.io
 
 ### 5. Setup Database
+
+```bash
 python manage.py migrate
 python manage.py create_demo_user
+```
 
 ## Running the Application
 
