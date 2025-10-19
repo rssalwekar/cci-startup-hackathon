@@ -1,24 +1,46 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interview Results - Session {{ session.id }}</title>
-<style>
+{% extends 'base.html' %}
+
+{% block title %}Interview Results - InterVue{% endblock %}
+
+{% block extra_styles %}
+    /* Override body color for results page */
+    body {
+        color: #333;
+    }
+    
+    /* Make content area have light background */
+    .content {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        min-height: calc(100vh - 160px);
+        margin: 20px;
+        padding: 40px;
+    }
+    
     .results-container {
         max-width: 1400px;
         margin: 0 auto;
-        padding: 20px;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 0;
+        min-height: calc(100vh - 120px);
     }
     
     .results-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: white;
+        color: #333;
         padding: 30px;
         border-radius: 15px;
         margin-bottom: 30px;
         text-align: center;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0e0e0;
+    }
+    
+    .results-header h1 {
+        color: #667eea;
+    }
+    
+    .results-header > p {
+        color: #666;
     }
     
     .results-header h1 {
@@ -36,15 +58,16 @@
     }
     
     .info-item {
-        background: rgba(255, 255, 255, 0.1);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
         padding: 15px 25px;
         border-radius: 10px;
-        backdrop-filter: blur(10px);
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
     }
     
     .info-label {
         font-size: 0.9em;
-        opacity: 0.8;
+        opacity: 0.9;
         margin-bottom: 5px;
     }
     
@@ -66,6 +89,7 @@
         padding: 25px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         border: 1px solid #e0e0e0;
+        color: #333;
     }
     
     .section-header {
@@ -86,6 +110,16 @@
         font-weight: 600;
         color: #333;
         margin: 0;
+    }
+    
+    .results-section * {
+        color: #333;
+    }
+    
+    .results-section .message-time,
+    .results-section .info-label,
+    .results-section small {
+        color: #666;
     }
     
     /* Video Recording Section */
@@ -232,6 +266,11 @@
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         border: 1px solid #e0e0e0;
         margin-bottom: 30px;
+        color: #333;
+    }
+    
+    .problem-details * {
+        color: #333;
     }
     
     .problem-title {
@@ -424,13 +463,13 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
-</style>
-</head>
-<body>
+{% endblock %}
+
+{% block content %}
 <div class="results-container">
     <!-- Header Section -->
     <div class="results-header">
-        <h1>🎯 Interview Complete!</h1>
+        <h1>Interview Complete!</h1>
         <p>Great job completing your coding interview. Here's your comprehensive session report.</p>
         
         <div class="session-info">
@@ -546,11 +585,11 @@
                         <div class="message-header">
                             <span class="message-sender">
                                 {% if message.message_type == 'user' %}
-                                    👤 You
+                                    You
                                 {% elif message.message_type == 'ai' %}
-                                    🤖 AI Interviewer
+                                    AI Interviewer
                                 {% else %}
-                                    ⚙️ System
+                                    System
                                 {% endif %}
                             </span>
                             <span class="message-time">{{ message.timestamp|date:"H:i:s" }}</span>
@@ -628,11 +667,11 @@
 
     <!-- Action Buttons -->
     <div class="action-buttons">
-        <a href="{% url 'start_interview' %}" class="btn btn-primary">
-            🚀 Start New Interview
+        <a href="{% url 'interview_history' %}" class="btn btn-secondary">
+            ← Back to History
         </a>
-        <a href="{% url 'interview_results' session.id %}" class="btn btn-secondary">
-            📄 Download Report
+        <a href="{% url 'start_interview' %}" class="btn btn-primary">
+            � Start New Interview
         </a>
         <button onclick="window.print()" class="btn btn-secondary">
             🖨️ Print Results
@@ -677,5 +716,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-</body>
-</html>
+</div>
+{% endblock %}

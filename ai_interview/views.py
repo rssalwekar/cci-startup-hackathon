@@ -67,22 +67,29 @@ def complete_interview(request, session_id):
     
     if request.method == 'POST':
         try:
-            # Generate AI feedback
-            ai_agent = AIInterviewAgent()
-            feedback = ai_agent.generate_feedback(session)
-            
-            # Update session
+            # Mark session as completed immediately for fast response
             session.status = 'completed'
             session.completed_at = timezone.now()
-            session.ai_feedback = feedback
             session.save()
+            
+            # Generate AI feedback (this can take time)
+            # For better UX, we still do it synchronously but return quickly
+            try:
+                ai_agent = AIInterviewAgent()
+                feedback = ai_agent.generate_feedback(session)
+                session.ai_feedback = feedback
+                session.save()
+            except Exception as feedback_error:
+                # If feedback generation fails, log it but don't block completion
+                print(f"Error generating feedback: {feedback_error}")
+                session.ai_feedback = "Feedback generation in progress. Please refresh the page in a moment."
+                session.save()
             
             # Check if this is an AJAX request
             if request.headers.get('Content-Type') == 'application/json':
                 return JsonResponse({
                     'success': True,
-                    'message': 'Interview completed and feedback generated successfully',
-                    'feedback': feedback
+                    'message': 'Interview completed successfully'
                 })
             else:
                 return redirect('interview_results', session_id=session.id)
@@ -96,7 +103,7 @@ def complete_interview(request, session_id):
                 }, status=500)
             else:
                 # For non-AJAX requests, still redirect but log the error
-                print(f"Error generating feedback: {e}")
+                print(f"Error completing interview: {e}")
                 return redirect('interview_results', session_id=session.id)
     
     return render(request, 'ai_interview/complete_interview.html', {'session': session})

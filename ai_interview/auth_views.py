@@ -253,7 +253,7 @@ def interview_history(request):
 
 @login_required
 def interview_detail(request, session_id):
-    """View details of a specific interview session"""
+    """View details of a specific interview session - shows the same results page as after completion"""
     session = get_object_or_404(
         InterviewSession,
         id=session_id,
@@ -261,17 +261,24 @@ def interview_detail(request, session_id):
     )
     
     # Get messages and code submissions
-    messages_list = session.messages.all().order_by('timestamp')
+    messages = session.messages.all().order_by('timestamp')
     code_submissions = session.code_submissions.all().order_by('timestamp')
+    
+    # Try to get recording data
+    try:
+        recording = session.recording
+    except:
+        recording = None
     
     context = {
         'session': session,
-        'messages': messages_list,
+        'messages': messages,
         'code_submissions': code_submissions,
-        'duration_minutes': int(session.get_duration()),
+        'recording': recording,
     }
     
-    return render(request, 'ai_interview/interview_detail.html', context)
+    # Use the same results template that's shown after completing an interview
+    return render(request, 'ai_interview/results.html', context)
 
 
 @login_required
